@@ -9,13 +9,12 @@ const dict: Record<string, string> = {
   fediPost: "帖子",   // "Post" — fediverse cards
   fediVideo: "视频",   // "Video" — fediverse cards
   fediEvent: "活动",   // "Event" — fediverse cards
-  homeTagline: "端到端加密的会议工具。一个链接打开全部。",   // "Meeting tools, end-to-end encrypted. One link opens all of them." — landing page
-  homeKey: "上面的链接共享一把新密钥：打开任一工具，再把它的链接发给其他人。",   // "The links above share one fresh key: open any tool, then send its link to the others." — landing page
-  desc_meet: "视频通话，含聊天、屏幕与 PDF 共享、批注、投票。",   // "Video calls with chat, screen and PDF sharing, annotations, polls." — landing card, under the tool name
-  desc_when: "找到对所有人都合适的时间。",   // "Find a time that works for everyone." — landing card, under the tool name
-  desc_pad: "一起写作：Markdown、幻灯片、附件、作者颜色。",   // "Write together: markdown, slides, attachments, author colours." — landing card, under the tool name
-  desc_share: "会议文件，在浏览器中加密。",   // "Files for the meeting, encrypted in the browser." — landing card, under the tool name
-  desc_form: "表单与投票，答案仅所有者可读或对所有人公开。",   // "Forms and polls, answers readable only by the owner or by everyone." — landing card, under the tool name
+  homeTagline: "端到端加密的匿名协作套件。",   // "End-to-end encrypted, anonymous collaboration suite." — landing page
+  desc_meet: "视频通话，含聊天、屏幕与 PDF 共享、批注和投票。",   // "Video calls with chat, screen and PDF sharing, annotations and polls." — landing card, under the tool name
+  desc_when: "找到大家都方便的时间。",   // "Find a time that works for everyone." — landing card, under the tool name
+  desc_pad: "一起写作：markdown、幻灯片、评论、附件。",   // "Write together: markdown, slides, comments, attachments." — landing card, under the tool name
+  desc_share: "文件分享与收集。",   // "File sharing and collection." — landing card, under the tool name
+  desc_form: "私下或公开地收集信息、回答和问卷。",   // "Collect information, answers and surveys, privately or publicly." — landing card, under the tool name
   micMuted: "麦克风已静音",   // "Microphone muted" — call
   camIsOff: "摄像头已关闭",   // "Camera off" — call
   new: "新建",   // "New" — header markup: <a #new>

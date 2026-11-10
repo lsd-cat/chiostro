@@ -9,13 +9,12 @@ const dict: Record<string, string> = {
   fediPost: "Post",   // "Post" — fediverse cards
   fediVideo: "Video",   // "Video" — fediverse cards
   fediEvent: "Evento",   // "Event" — fediverse cards
-  homeTagline: "Strumenti per riunioni, cifrati end-to-end. Un link li apre tutti.",   // "Meeting tools, end-to-end encrypted. One link opens all of them." — landing page
-  homeKey: "I link qui sopra condividono una chiave nuova: apri uno strumento, poi manda il suo link agli altri.",   // "The links above share one fresh key: open any tool, then send its link to the others." — landing page
-  desc_meet: "Videochiamate con chat, condivisione di schermo e PDF, annotazioni, sondaggi.",   // "Video calls with chat, screen and PDF sharing, annotations, polls." — landing card, under the tool name
+  homeTagline: "Suite di collaborazione anonima, cifrata end-to-end.",   // "End-to-end encrypted, anonymous collaboration suite." — landing page
+  desc_meet: "Videochiamate con chat, condivisione di schermo e PDF, annotazioni e sondaggi.",   // "Video calls with chat, screen and PDF sharing, annotations and polls." — landing card, under the tool name
   desc_when: "Trova un orario che vada bene a tutti.",   // "Find a time that works for everyone." — landing card, under the tool name
-  desc_pad: "Scrivete insieme: markdown, slide, allegati, colori per autore.",   // "Write together: markdown, slides, attachments, author colours." — landing card, under the tool name
-  desc_share: "File della riunione, cifrati nel browser.",   // "Files for the meeting, encrypted in the browser." — landing card, under the tool name
-  desc_form: "Moduli e sondaggi, risposte leggibili solo dal proprietario o da tutti.",   // "Forms and polls, answers readable only by the owner or by everyone." — landing card, under the tool name
+  desc_pad: "Scrivete insieme: markdown, slide, commenti, allegati.",   // "Write together: markdown, slides, comments, attachments." — landing card, under the tool name
+  desc_share: "Condivisione e raccolta di file.",   // "File sharing and collection." — landing card, under the tool name
+  desc_form: "Raccogli informazioni, risposte e sondaggi, in privato o in pubblico.",   // "Collect information, answers and surveys, privately or publicly." — landing card, under the tool name
   micMuted: "Microfono disattivato",   // "Microphone muted" — call
   camIsOff: "Fotocamera spenta",   // "Camera off" — call
   new: "Nuovo",   // "New" — header markup: <a #new>

@@ -9,13 +9,12 @@ const dict: Record<string, string> = {
   fediPost: "Post",   // fediverse cards
   fediVideo: "Video",   // fediverse cards
   fediEvent: "Event",   // fediverse cards
-  homeTagline: "Meeting tools, end-to-end encrypted. One link opens all of them.",   // landing page
-  homeKey: "The links above share one fresh key: open any tool, then send its link to the others.",   // landing page
-  desc_meet: "Video calls with chat, screen and PDF sharing, annotations, polls.",   // landing card, under the tool name
+  homeTagline: "End-to-end encrypted, anonymous collaboration suite.",   // landing page
+  desc_meet: "Video calls with chat, screen and PDF sharing, annotations and polls.",   // landing card, under the tool name
   desc_when: "Find a time that works for everyone.",   // landing card, under the tool name
-  desc_pad: "Write together: markdown, slides, attachments, author colours.",   // landing card, under the tool name
-  desc_share: "Files for the meeting, encrypted in the browser.",   // landing card, under the tool name
-  desc_form: "Forms and polls, answers readable only by the owner or by everyone.",   // landing card, under the tool name
+  desc_pad: "Write together: markdown, slides, comments, attachments.",   // landing card, under the tool name
+  desc_share: "File sharing and collection.",   // landing card, under the tool name
+  desc_form: "Collect information, answers and surveys, privately or publicly.",   // landing card, under the tool name
   micMuted: "Microphone muted",   // call
   camIsOff: "Camera off",   // call
   new: "New",   // header markup: <a #new>

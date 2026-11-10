@@ -9,13 +9,12 @@ const dict: Record<string, string> = {
   fediPost: "منشور",   // "Post" — fediverse cards
   fediVideo: "فيديو",   // "Video" — fediverse cards
   fediEvent: "حدث",   // "Event" — fediverse cards
-  homeTagline: "أدوات اجتماعات مشفّرة من طرف إلى طرف. رابط واحد يفتحها كلها.",   // "Meeting tools, end-to-end encrypted. One link opens all of them." — landing page
-  homeKey: "الروابط أعلاه تتشارك مفتاحًا جديدًا: افتح أي أداة ثم أرسل رابطها للآخرين.",   // "The links above share one fresh key: open any tool, then send its link to the others." — landing page
-  desc_meet: "مكالمات فيديو مع دردشة ومشاركة الشاشة وملفات PDF وتعليقات واستطلاعات.",   // "Video calls with chat, screen and PDF sharing, annotations, polls." — landing card, under the tool name
+  homeTagline: "حزمة تعاون مجهولة الهوية، مشفّرة من طرف إلى طرف.",   // "End-to-end encrypted, anonymous collaboration suite." — landing page
+  desc_meet: "مكالمات فيديو مع دردشة ومشاركة الشاشة وملفات PDF وتعليقات واستطلاعات.",   // "Video calls with chat, screen and PDF sharing, annotations and polls." — landing card, under the tool name
   desc_when: "اعثر على وقت يناسب الجميع.",   // "Find a time that works for everyone." — landing card, under the tool name
-  desc_pad: "اكتبوا معًا: ماركداون وشرائح ومرفقات وألوان للمؤلفين.",   // "Write together: markdown, slides, attachments, author colours." — landing card, under the tool name
-  desc_share: "ملفات الاجتماع، مشفّرة في المتصفح.",   // "Files for the meeting, encrypted in the browser." — landing card, under the tool name
-  desc_form: "نماذج واستطلاعات، الإجابات يقرؤها المالك وحده أو الجميع.",   // "Forms and polls, answers readable only by the owner or by everyone." — landing card, under the tool name
+  desc_pad: "اكتبوا معًا: ماركداون وشرائح وتعليقات ومرفقات.",   // "Write together: markdown, slides, comments, attachments." — landing card, under the tool name
+  desc_share: "مشاركة الملفات وجمعها.",   // "File sharing and collection." — landing card, under the tool name
+  desc_form: "اجمع المعلومات والإجابات والاستبيانات، سرًا أو علنًا.",   // "Collect information, answers and surveys, privately or publicly." — landing card, under the tool name
   micMuted: "الميكروفون مكتوم",   // "Microphone muted" — call
   camIsOff: "الكاميرا مغلقة",   // "Camera off" — call
   new: "جديد",   // "New" — header markup: <a #new>

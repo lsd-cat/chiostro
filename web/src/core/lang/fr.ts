@@ -9,13 +9,12 @@ const dict: Record<string, string> = {
   fediPost: "Message",   // "Post" — fediverse cards
   fediVideo: "Vidéo",   // "Video" — fediverse cards
   fediEvent: "Événement",   // "Event" — fediverse cards
-  homeTagline: "Outils de réunion, chiffrés de bout en bout. Un lien les ouvre tous.",   // "Meeting tools, end-to-end encrypted. One link opens all of them." — landing page
-  homeKey: "Les liens ci-dessus partagent une clé neuve : ouvrez un outil, puis envoyez son lien aux autres.",   // "The links above share one fresh key: open any tool, then send its link to the others." — landing page
-  desc_meet: "Appels vidéo avec chat, partage d’écran et de PDF, annotations, sondages.",   // "Video calls with chat, screen and PDF sharing, annotations, polls." — landing card, under the tool name
+  homeTagline: "Suite de collaboration anonyme, chiffrée de bout en bout.",   // "End-to-end encrypted, anonymous collaboration suite." — landing page
+  desc_meet: "Appels vidéo avec chat, partage d’écran et de PDF, annotations et sondages.",   // "Video calls with chat, screen and PDF sharing, annotations and polls." — landing card, under the tool name
   desc_when: "Trouvez un créneau qui convient à tous.",   // "Find a time that works for everyone." — landing card, under the tool name
-  desc_pad: "Écrivez ensemble : markdown, diapositives, pièces jointes, couleurs par auteur.",   // "Write together: markdown, slides, attachments, author colours." — landing card, under the tool name
-  desc_share: "Fichiers de la réunion, chiffrés dans le navigateur.",   // "Files for the meeting, encrypted in the browser." — landing card, under the tool name
-  desc_form: "Formulaires et sondages, réponses lisibles par le propriétaire seul ou par tous.",   // "Forms and polls, answers readable only by the owner or by everyone." — landing card, under the tool name
+  desc_pad: "Écrivez ensemble : markdown, diapositives, commentaires, pièces jointes.",   // "Write together: markdown, slides, comments, attachments." — landing card, under the tool name
+  desc_share: "Partage et collecte de fichiers.",   // "File sharing and collection." — landing card, under the tool name
+  desc_form: "Collectez des informations, des réponses et des sondages, en privé ou en public.",   // "Collect information, answers and surveys, privately or publicly." — landing card, under the tool name
   micMuted: "Micro coupé",   // "Microphone muted" — call
   camIsOff: "Caméra éteinte",   // "Camera off" — call
   new: "Nouveau",   // "New" — header markup: <a #new>

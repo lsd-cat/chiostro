@@ -16,7 +16,6 @@ for (const app of config.apps) {
   card.append(disc, el('b', t('app_' + app)), el('span', t('desc_' + app)));
   $('toolgrid').append(card);
 }
-$('keynote').textContent = t('homeKey');
 if (config.logo) { const logo = $<HTMLImageElement>('homelogo'); logo.src = config.logo; logo.hidden = false; }
 if (config.intro) { $('intro').textContent = config.intro; $('intro').hidden = false; }
 if (config.links.length) { $('homelinks').append(...config.links.map(l => { const a = el('a', l.label); a.href = l.url; if (!l.url.startsWith('/')) a.rel = 'noopener'; return a; })); $('homelinks').hidden = false; }

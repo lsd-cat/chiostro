@@ -12,7 +12,7 @@ const SAFE_VALUE = /^[\w\s#%.,()/"'-]{1,200}$/;
 const UNSAFE = /url\s*\(|expression|@|\\|;|\{|\}/i;
 const SAFE_URL = /^(\/[\w./-]*|https:\/\/[\w.-]+(:\d+)?(\/[\w./%?=&#-]*)?)$/;   // a path on this origin, or an https URL
 
-export const DEFAULTS: Config = {name: 'Chiostro', tagline: '', logo: '', intro: '', links: [], texmf: '/texmf/', server: '', apps: ['meet', 'when', 'pad', 'share', 'form'], media: 'relay', iceServers: [{urls: 'stun:stun.l.google.com:19302'}], theme: {light: {}, dark: {}}, extensions: {}};
+export const DEFAULTS: Config = {name: 'Chiostro', tagline: '', logo: '', intro: '', links: [], texmf: '/texmf/', server: '', apps: ['meet', 'when', 'pad', 'share', 'form'], media: 'relay', iceServers: [{urls: 'stun:stun.l.google.com:19302'}], theme: {light: {accent: '#a24d33'}, dark: {accent: '#e08264'}}, extensions: {}};   // terracotta from the logo, a lighter one on dark
 
 /** Theme variables from untrusted input: known names, safe values only. */
 export function theme(set: unknown): Theme {
@@ -38,7 +38,7 @@ export function validate(raw: unknown): Config {
     apps: Array.isArray(r['apps']) ? (r['apps'] as unknown[]).filter((a): a is string => typeof a === 'string' && /^[a-z]{2,8}$/.test(a)) : DEFAULTS.apps,
     media: r['media'] === 'p2p' ? 'p2p' : 'relay',
     iceServers: ice,
-    theme: {light: theme(t['light']), dark: theme(t['dark'])},
+    theme: r['theme'] === undefined ? DEFAULTS.theme : {light: theme(t['light']), dark: theme(t['dark'])},   // no theme in the config: the project's; a theme without an accent: the stylesheet's
     // per-deployment on/off switches by extension name; unknown names are ignored by the loader
     extensions: Object.fromEntries(Object.entries((r['extensions'] && typeof r['extensions'] === 'object' ? r['extensions'] : {}) as Record<string, unknown>).filter(([k, v]) => /^[a-z]+$/.test(k) && typeof v === 'boolean') as [string, boolean][]),
   };

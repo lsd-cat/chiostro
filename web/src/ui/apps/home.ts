@@ -6,8 +6,10 @@ import {$, el, css, icon} from '../dom.js';
 const ICONS: Record<string, string> = {meet: 'phone', when: 'calendar', pad: 'doc', share: 'clip', form: 'inbox'};
 css('/css/home.css');
 start();
+document.body.classList.add('home');   // no header bar: only the language and theme controls, on the plain background
 $('toolbar').hidden = true;   // nothing to copy or renew here: the cards carry the key
 $('brand').hidden = true;     // the page's own heading is the one h1
+$('nav').hidden = true;       // the cards are the navigation
 $('tagline').textContent = config.tagline || t('homeTagline');
 $('homename').textContent = config.name;
 for (const app of config.apps) {

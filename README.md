@@ -138,8 +138,10 @@ test/                     unit tests and headless-Chrome suites
 
 ## Languages
 
-English, Italian, French, Spanish, Chinese and Arabic (right to left), in a single dictionary. A
-test fails when a key is missing from any language.
+English, Italian, French, Spanish, Chinese and Arabic (right to left). One file per language under
+`web/src/core/lang/`, one key per line, each with a comment saying where the string appears and,
+outside English, the English source. `node tools/i18n-split.mjs` refreshes the comments after a
+build. A test fails when a key is missing from any language.
 
 ## Limits
 

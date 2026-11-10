@@ -1,0 +1,1 @@
+.tile.hand::after { content: "✋ " attr(data-hand); position: absolute; top: 8px; inset-inline-end: 8px; padding: 2px 8px; border-radius: 6px; background: #000a; color: #fff; font-size: 14px; }

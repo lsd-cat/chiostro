@@ -1,0 +1,46 @@
+---
+# One host, one vhost, every app: the bundle in dist/, config.json as data, relay.lua for the relay
+# and the store. Override per host (host_vars / playbook vars / -e). Set chiostro_src_dir to this repo's root.
+chiostro_src_dir: "{{ playbook_dir }}/../.."
+
+# REQUIRED: the domain. It serves the landing page at / and every tool in chiostro_config.apps under its
+# path (/meet/, /pad/, ...): one name, one certificate. Rooms are per nginx worker, so the role
+# refuses hosts with worker_processes != 1 unless chiostro_force_single_worker is true.
+chiostro_domain: chiost.ro
+# Served verbatim as /config.json: branding, theme variables, ICE servers, default relay, the apps to
+# link to. The signed bundle stays identical across deployments (WEBCAT); only this data differs.
+chiostro_config:
+  name: Chiostro
+  apps: [meet, when, pad, share, form]
+  iceServers: [{urls: "stun:stun.l.google.com:19302"}]
+  theme: {light: {}, dark: {}}
+# The upload rate limit keys on the client address: nginx must face clients directly. Behind a load
+# balancer or CDN every client would share one limit; fold X-Forwarded-For into relay.lua first.
+chiostro_connect_src: ""               # extra CSP connect-src origins: another relay ("wss://relay.example.org") and the Fediverse instances pads may snapshot ("https://mastodon.example https://gancio.example")
+chiostro_texmf_src: ""                 # a local copy of tstex's bundles/minimal (20 MB) to serve at /texmf/ for PDF export; empty: the pad falls back to the print dialog
+chiostro_frame_src: "https:"           # CSP frame-src for the embed extension; restrict to origins, or "" to disable
+chiostro_force_single_worker: false    # set worker_processes 1 in nginx.conf (correct on a 1-vCPU host)
+
+# The store: sealed blobs named <app>/<room>.<slot>, on this disk or in an S3-compatible bucket.
+chiostro_store: disk              # disk | s3
+chiostro_data_dir: "/var/www/{{ chiostro_domain }}/data"   # disk: the blobs and an index per room; s3: only the 8 MB upload spool
+chiostro_s3:                      # s3: the endpoint host, bucket, region and a key scoped to that bucket (vault them)
+  host: s3.eu-south-mil.io.cloud.ovh.net
+  bucket: chiostro-store
+  region: eu-south-mil
+  key: ""
+  secret: ""
+chiostro_chunk_max: 8m                 # one PUT; relay.lua enforces the per-room quota on top
+chiostro_expiry_days: {meet: 30, p2p: 30, when: 90, pad: 90, share: 30, form: 90}   # rooms not written to for this long are deleted daily, on disk by find, in a bucket by expire.lua (reads do not count: a link someone keeps fetching must not keep a room alive)
+chiostro_keep_checkpoints: 40          # per pad room, the newest checkpoints kept by the daily prune; answers, files and heads are never touched
+
+chiostro_web_dir: "/var/www/{{ chiostro_domain }}/htdocs"
+chiostro_app_dir: "/var/www/{{ chiostro_domain }}/app"
+chiostro_logs: "/var/www/{{ chiostro_domain }}/logs"
+chiostro_lua_lib_dir: /usr/local/share/lua/5.1   # on LuaJIT's default package.path; vendored lua-resty-websocket goes here
+
+# TLS: self-signed bootstrap so nginx 443 loads, then acme.sh issues via HTTP-01 from chiostro_acme_webroot.
+chiostro_acme_sh: /usr/bin/acme.sh
+chiostro_acme_webroot: "{{ chiostro_web_dir }}"
+chiostro_ssl_cert: "/etc/ssl/certs/{{ chiostro_domain }}.pem"
+chiostro_ssl_key: "/etc/ssl/private/{{ chiostro_domain }}.key"

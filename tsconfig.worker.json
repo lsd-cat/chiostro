@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "lib": ["ES2022", "WebWorker"] },
+  "include": ["web/src/worker.ts", "web/src/core/crypto.ts"],
+  "exclude": []
+}

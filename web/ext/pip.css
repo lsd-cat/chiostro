@@ -1,0 +1,2 @@
+body.pip { margin: 0; height: 100vh; display: flex; background: #000; }
+body.pip #tiles { flex: 1; align-content: stretch; padding: 4px; gap: 4px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }

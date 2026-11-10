@@ -1,0 +1,25 @@
+{{ ansible_managed | comment }}
+# Where the store keeps its blobs. Included by the vhost; relay.lua reads these variables.
+set $data {{ chiostro_data_dir }};
+{% if chiostro_store == 's3' %}
+set $s3_host "{{ chiostro_s3.host }}"; set $s3_bucket "{{ chiostro_s3.bucket }}"; set $s3_region "{{ chiostro_s3.region }}";
+set $s3_key "{{ chiostro_s3.key }}"; set $s3_secret "{{ chiostro_s3.secret }}";
+# s3.lua's signed subrequests go through here: path-style, the bucket in the path, TLS verified.
+location ^~ /_s3/ {
+	internal;
+	proxy_pass https://{{ chiostro_s3.host }}/{{ chiostro_s3.bucket }}/;
+	proxy_http_version 1.1;
+	proxy_set_header Host {{ chiostro_s3.host }};
+	proxy_set_header Connection "";
+	proxy_ssl_server_name on;
+	proxy_ssl_verify on;
+	proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+	proxy_hide_header x-amz-request-id; proxy_hide_header x-amz-id-2;
+	proxy_hide_header Content-Type; proxy_hide_header Content-Disposition;   # a blob is bytes whatever the uploader called it: never a page on this origin
+	add_header Content-Type application/octet-stream always; add_header Content-Disposition attachment always; add_header X-Content-Type-Options nosniff always;
+	add_header Cache-Control "private, max-age=31536000, immutable";
+}
+location = /_expire { allow 127.0.0.1; allow ::1; deny all; content_by_lua_file {{ chiostro_app_dir }}/expire.lua; }
+{% else %}
+set $s3_host ""; set $s3_bucket ""; set $s3_region ""; set $s3_key ""; set $s3_secret "";
+{% endif %}

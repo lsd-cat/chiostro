@@ -1,0 +1,141 @@
+/* Pad: header, presence line, editor and preview side by side, slides. Tokens from /style.css. */
+#histbar { display: flex; gap: 8px; align-items: center; padding: 6px 16px; background: var(--tint); font-size: 14px; }
+#histbar button { padding: 6px 12px; }
+
+#padmain { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
+/* The textarea sits on a layer that renders the same text with the same metrics, so author
+   colours can be painted behind each run; the textarea itself is transparent. */
+#editwrap { position: relative; min-height: 0; border-inline-end: 1px solid var(--border); background: var(--bg); view-transition-name: editor; }
+#preview { view-transition-name: preview; }
+#editor, #marks { position: absolute; inset: 0; margin: 0; font: 14px/1.5 ui-monospace, monospace; padding: 16px max(16px, calc((100% - 88ch) / 2)); white-space: pre-wrap; overflow-wrap: break-word; overflow: auto; box-sizing: border-box; letter-spacing: normal; tab-size: 4; }
+/* The layer shows the text, coloured by syntax, with author runs as tints when asked; the textarea's own text is invisible
+   (its caret and selection are not). Colours only, never a weight or style: the two must keep the same glyph widths. */
+#editor { color: transparent; caret-color: var(--fg); background: transparent; border: 0; border-radius: 0; resize: none; outline: none; }
+#editor::selection { background: color-mix(in oklch, var(--accent) 30%, transparent); }
+#marks { color: var(--fg); pointer-events: none; scrollbar-width: none; }
+#marks.authors span[data-who] { background: hsl(var(--hue) 70% 50% / .1); box-shadow: inset 3px 0 0 hsl(var(--hue) 70% 50% / .8); border-radius: 2px; }   /* a faint tint and a coloured rule per run */
+#editwrap.plain #editor { color: var(--fg); } #editwrap.plain #marks { display: none; }
+/* other editors: their selection tinted, a caret with their name above it; both take no width, so the layer keeps the textarea's wrapping */
+#marks .rsel { background: hsl(var(--sel) 70% 50% / .25); }
+#marks .caret { position: relative; }
+#marks .caret::before { content: ''; position: absolute; left: -1px; top: 0; width: 2px; height: 1.5em; background: hsl(var(--hue) 70% 50%); }
+#marks .caret::after { content: attr(data-who); position: absolute; left: -1px; bottom: 1.25em; padding: 0 4px; font: 9px/1.4 system-ui, sans-serif; white-space: nowrap; color: #fff; background: hsl(var(--hue) 70% 45%); border-radius: 3px 3px 3px 0; }
+.tk-h, .tk-link, .tk-cmd { color: var(--accent); }
+.tk-env { color: color-mix(in oklch, var(--accent) 70%, var(--fg)); }
+.tk-code, .tk-math { color: color-mix(in oklch, var(--ok, #2a9d5c) 70%, var(--fg)); }
+.tk-strong { color: color-mix(in oklch, var(--accent) 40%, var(--fg)); }
+.tk-list, .tk-quote, .tk-hr, .tk-meta, .tk-url, .tk-brace, .tk-comment { color: var(--muted); }
+.tk-del { text-decoration: line-through; }
+@media (forced-colors: active) { #marks.authors span[data-who] { background: Mark; } #editor { color: CanvasText; } #marks { display: none; } }
+#editor:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#editor::placeholder { color: var(--muted); }
+#preview { overflow: auto; padding: 16px max(24px, calc((100% - 72ch) / 2)); line-height: 1.55; }
+#padmain[data-view="edit"] { grid-template-columns: 1fr; } #padmain[data-view="edit"] #preview { display: none; }
+#padmain[data-view="slides"] { grid-template-columns: 1fr; }
+/* the document alone: one centred column of at most 820px, so the preview's own width is the measure its padding is computed from */
+#padmain[data-view="view"], body.viewing #padmain { grid-template-columns: minmax(0, 820px); justify-content: center; } #padmain[data-view="view"] #editwrap, #padmain[data-view="slides"] #editwrap { display: none; }
+@container (max-width: 800px) { #padmain[data-view="both"] { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } #editwrap { border-inline-end: 0; border-bottom: 1px solid var(--border); } }
+::view-transition-old(editor), ::view-transition-new(editor), ::view-transition-old(preview), ::view-transition-new(preview) { animation-duration: .2s; }
+
+/* the table of contents: a sidebar beside the document on wide screens, a row of chips above it on narrow ones */
+#padmain:has(#toc:not([hidden])) { grid-template-columns: 220px minmax(0, 820px); }
+#toc { overflow: auto; padding: 20px 12px 20px 20px; font-size: 14px; border-inline-end: 1px solid var(--border); }
+#toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#toc .l2 { padding-inline-start: 12px; } #toc .l3 { padding-inline-start: 24px; }
+#toc a { display: block; padding: 4px 8px; border-radius: 6px; color: var(--muted); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#toc a:hover { color: var(--fg); background: var(--panel-2); }
+#toc a[aria-current] { color: var(--accent); font-weight: 600; }
+@container (max-width: 800px) {
+  #padmain:has(#toc:not([hidden])) { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  #toc { padding: 8px 12px; border-inline-end: 0; border-bottom: 1px solid var(--border); }
+  #toc ul { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; } #toc .l2, #toc .l3 { padding: 0; }
+  #toc a { background: var(--panel-2); border-radius: 999px; padding: 4px 12px; }
+}
+
+/* rendered markdown */
+/* the document's # is an h2 (the page's h1 is the header title), so the sizes start one level down */
+#preview h2, .slide h2 { font-size: 1.8em; margin: .4em 0; } #preview h3, .slide h3 { font-size: 1.4em; margin: .6em 0 .3em; }
+#preview .fedi-card h3, .slide .fedi-card h3 { font-size: 16px; margin: 0; }
+#preview p, .slide p { margin: .5em 0; }
+#preview a, .slide a { color: var(--accent); }
+/* Media fits the column: a landscape clip or image takes the width, a portrait one is capped at
+   three quarters of the window and centred; the player's box follows the clip's own shape (--ar). */
+#preview img, .slide img { display: block; max-width: 100%; max-height: 85vh; width: auto; height: auto; margin: 0 auto; }
+#preview video, .slide video { display: block; aspect-ratio: var(--ar, 16 / 9); width: min(100%, calc(75vh * var(--ar, 1.78))); margin: 0 auto; background: #000; border-radius: var(--radius-panel); }
+#preview audio, .slide audio { width: 100%; }
+#preview pre, .slide pre { background: var(--panel-2); padding: 10px 12px; border-radius: var(--radius-panel); overflow: auto; }
+#preview pre code, .slide pre code { background: none; padding: 0; }
+#preview blockquote, .slide blockquote { margin: .5em 0; padding: 2px 12px; border-inline-start: 3px solid var(--accent); color: var(--muted); }
+#preview table, .slide table { border-collapse: collapse; margin: .5em 0; }
+#preview th, #preview td, .slide th, .slide td { border: 1px solid var(--border); padding: 4px 10px; }
+#preview hr, .slide hr { border: 0; border-top: 1px solid var(--border); }
+li.task { list-style: none; margin-inline-start: -1.2em; }
+
+/* slides: stacked in the preview, one at a time when presenting */
+#padmain[data-view="slides"] #preview { background: var(--panel-2); display: grid; gap: 16px; align-content: start; justify-items: center; }
+#padmain[data-view="slides"] .slide { width: min(960px, 100%); aspect-ratio: 16 / 9; padding: 32px 48px; background: var(--panel); border-radius: var(--radius-panel); box-shadow: var(--shadow); }   /* grows past 16:9 when a slide is long */
+#present-view { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; background: var(--bg); outline: none; }
+#present-view .slide { flex: 1; padding: 6vh 8vw; font-size: clamp(18px, 2.6vw, 34px); overflow: auto; }
+#slidebar { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; font-size: 14px; color: var(--muted); border-top: 1px solid var(--border); }
+#slidebar button { padding: 6px 12px; }
+
+/* a view-only page: the document, nothing else */
+body.viewing #editwrap { display: none; }
+iframe.embed { width: 100%; height: 320px; border: 0; border-radius: var(--radius-panel); background: var(--panel); box-shadow: var(--shadow); }
+
+/* Fediverse cards: a snapshot of a post, video or event */
+.fedi { margin: .6em 0; }
+.fedi-card { display: grid; gap: 6px; padding: 14px 16px; max-width: 640px; }
+.fedi-head { display: flex; gap: 8px; align-items: center; }
+.badge-soft { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); color: var(--muted); }
+.fedi-card h3 { margin: 0; font-size: 16px; }
+.fedi-card h3 a { color: var(--fg); text-decoration: none; }
+.fedi-card h3 a:hover { text-decoration: underline; }
+.fedi-when { font-weight: 600; }
+.fedi-text { white-space: pre-line; color: var(--fg); }
+.fedi-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fedi-foot a.button { min-height: 32px; padding: 0 12px; }
+.fedi > small { display: block; color: var(--muted); }
+
+/* Printing: the rendered document only; in slides view one page per slide */
+@media print {
+  #hdr, #histbar, #editwrap, #toc, #present-view, .fedi-foot button, iframe.embed { display: none !important; }
+  body, #app, #padmain { display: block; height: auto; overflow: visible; background: #fff; color: #000; }
+  #padmain { grid-template-columns: 1fr; }
+  #preview { display: block !important; overflow: visible; max-width: none; padding: 0; font-size: 11pt; line-height: 1.5; }
+  #preview h2, #preview h3, #preview h4 { break-after: avoid; }
+  #preview pre, #preview table, #preview img, #preview .fedi-card { break-inside: avoid; }
+  #preview a { color: #000; text-decoration: underline; }
+  #preview pre { border: 1px solid #ccc; background: #f5f5f5; }
+  body.print-slides #padmain #preview { display: block; background: none; gap: 0; }
+  body.print-slides #padmain .slide { break-after: page; width: 100%; aspect-ratio: auto; height: calc(100vh - 20mm); padding: 10mm 14mm; border: 0; box-shadow: none; font-size: 18pt; background: #fff; overflow: hidden; }
+  body.print-slides #padmain .slide:last-child { break-after: auto; }
+}
+
+/* the files sidebar: attachments of this pad, insertable; a third column on wide screens */
+#padmain[data-side] { grid-template-columns: 1fr 1fr 280px; }
+#padmain[data-side][data-view="edit"], #padmain[data-side][data-view="view"], body.viewing #padmain[data-side] { grid-template-columns: minmax(0, 1fr) 280px; justify-content: stretch; }
+#padfiles, #padcomments { border-inline-start: 1px solid var(--border); overflow: auto; padding: 12px; font-size: 14px; display: grid; gap: 10px; align-content: start; }
+#padfilelist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#padfilelist li { display: grid; gap: 4px; padding: 8px 10px; background: var(--bg); border-radius: var(--radius-panel); }
+#padfilelist b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+#padfilelist small { color: var(--muted); }
+#padfilelist .row { display: flex; gap: 4px; }
+#padfilelist button { min-height: 32px; padding: 0 10px; font-size: 13px; background: var(--tint); }
+#padfilesempty:not(:only-child) { display: none; }
+@container (max-width: 800px) { #padmain[data-side] { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; } #padfiles, #padcomments { max-height: 36vh; border-inline-start: 0; border-top: 1px solid var(--border); } }
+/* comment threads: a quote, its posts, a reply; the commented range is tinted in the editor's layer */
+.cm { background: color-mix(in oklch, var(--accent) 22%, transparent); box-shadow: inset 0 -2px 0 var(--accent); }
+.thread { display: grid; gap: 6px; padding: 10px; background: var(--bg); border-radius: var(--radius-panel); }
+.thread .quote { justify-content: start; text-align: start; min-height: 0; padding: 4px 8px; font: 13px ui-monospace, monospace; color: var(--muted); background: var(--panel-2); border-inline-start: 3px solid var(--accent); border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thread .post { display: grid; grid-template-columns: auto 1fr; gap: 0 2px; align-items: baseline; } .thread .post small { color: var(--muted); } .thread .post p { grid-column: 1 / -1; margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }   /* name · time on one line, the text under */
+.thread .marks-resolved p:empty::before { content: '✓ '; color: var(--muted); }
+.replyform { display: grid; grid-template-columns: 1fr auto auto; gap: 4px; align-items: center; }
+.replyform input { min-width: 0; min-height: 34px; padding: 4px 8px; font-size: 13px; } .replyform button { min-height: 34px; padding: 0 10px; font-size: 13px; }
+#commentform { display: grid; gap: 6px; } #commentform .row { display: flex; gap: 6px; }
+#commenton[disabled] { opacity: .55; }
+#commentsb[data-count]:not([data-count="0"])::after { content: attr(data-count); margin-inline-start: 6px; padding: 0 6px; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font-size: 12px; line-height: 18px; }
+/* a LaTeX pad: the preview is the compiled PDF */
+#padmain[data-mode="tex"] #preview { padding: 0; }
+#padmain[data-mode="tex"] #preview iframe.pdfview { width: 100%; height: 100%; border: 0; display: block; }
+#padmain[data-mode="tex"] #preview .texlog { padding: 16px; font: 13px ui-monospace, monospace; white-space: pre-wrap; color: var(--danger); }

@@ -1,0 +1,236 @@
+---
+# --- Build the client on the controller (TypeScript -> web/dist); zero runtime deps ---
+- name: Build frontend on the controller
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "{{ chiostro_src_dir }}"
+  delegate_to: localhost
+  become: false
+  run_once: true
+  check_mode: false
+  changed_when: false
+
+# --- Rooms are per worker: the relay needs exactly one nginx worker ---
+- name: Read nginx worker_processes
+  ansible.builtin.shell: grep -E '^\s*worker_processes' /etc/nginx/nginx.conf
+  register: _workers
+  check_mode: false
+  changed_when: false
+
+- name: Set worker_processes 1 (opted in)
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: '^\s*worker_processes'
+    line: "worker_processes 1;   # chiostro relay keeps rooms per worker"
+  when: chiostro_force_single_worker | bool
+  notify: reload nginx
+
+- name: Refuse to deploy a per-worker relay on a multi-worker nginx
+  ansible.builtin.assert:
+    that: chiostro_force_single_worker | bool or ('worker_processes 1;' in _workers.stdout)
+    fail_msg: "nginx has '{{ _workers.stdout | trim }}'; rooms would split across workers. Set chiostro_force_single_worker: true (1-vCPU host) or add cross-worker fan-out."
+    quiet: true
+
+# --- Directories ---
+- name: Create web/app/log directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "/var/www/{{ chiostro_domain }}"
+    - "{{ chiostro_web_dir }}"
+    - "{{ chiostro_app_dir }}"
+    - "{{ chiostro_logs }}"
+    - "{{ chiostro_lua_lib_dir }}/resty"
+
+# --- The Lua: relay.lua and expire.lua run by content_by_lua_file; s3.lua and the vendored resty modules Debian does not package (websocket, sha256) on LuaJIT's path ---
+- name: Deploy the relay and the expiry
+  ansible.builtin.copy:
+    src: "{{ chiostro_src_dir }}/openresty/{{ item }}"
+    dest: "{{ chiostro_app_dir }}/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: [relay.lua, expire.lua]
+  notify: reload nginx   # lua_code_cache: changed Lua needs an nginx reload
+
+- name: Deploy the bucket store module where require finds it
+  ansible.builtin.copy:
+    src: "{{ chiostro_src_dir }}/openresty/s3.lua"
+    dest: "{{ chiostro_lua_lib_dir }}/s3.lua"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: Deploy vendored resty modules
+  ansible.builtin.copy:
+    src: "{{ chiostro_src_dir }}/openresty/vendor/resty/"
+    dest: "{{ chiostro_lua_lib_dir }}/resty/"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+# --- Static client ---
+- name: "Deploy the bundle (dist/ is the whole site: shell, styles, modules)"
+  ansible.builtin.copy:
+    src: "{{ chiostro_src_dir }}/dist/"
+    dest: "{{ chiostro_web_dir }}/"
+    owner: root
+    group: root
+    mode: "0644"
+
+# --- The store: data directories written by nginx, http-level settings, idle expiry ---
+- name: Store directories (nginx spools uploads into tmp and renames them into the app's directory)
+  ansible.builtin.file:
+    path: "{{ chiostro_data_dir }}/{{ item }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0750"
+  loop: "{{ ['tmp'] + (chiostro_expiry_days.keys() | list) }}"
+
+- name: Store settings that live in the http context
+  ansible.builtin.copy:
+    content: |
+      # chiostro: rate windows and per-room quota cache for relay.lua, all entries with expiry
+      lua_shared_dict chiostro 2m;
+    dest: /etc/nginx/conf.d/chiostro-store.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: Prune script (old checkpoints of busy pads; everything else is kept until the room expires)
+  ansible.builtin.copy:
+    dest: "{{ chiostro_app_dir }}/prune.sh"
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      # Keep the newest $2 checkpoints of every room under $1 (a pad room writes one a minute while
+      # edited); drop the rest and their index lines. Checkpoint slots are 32 hex digits starting
+      # with 0000 and no dot; answers, chunks, manifests and heads never match and are never touched.
+      set -eu
+      for idx in "$1"/*.index; do
+        [ -f "$idx" ] || continue
+        room=${idx%.index}
+        awk '$2 ~ /^0000[0-9a-f]{28}$/ {print $2}' "$idx" | sort | head -n -"$2" | while read -r slot; do
+          rm -f "$room.$slot"; grep -v " $slot " "$idx" > "$idx.new" && mv "$idx.new" "$idx"
+        done
+      done
+  when: "'pad' in chiostro_config.apps"
+
+- name: Prune old pad checkpoints
+  ansible.builtin.cron:
+    name: "chiostro prune pad checkpoints {{ chiostro_domain }}"
+    special_time: daily
+    job: "{{ chiostro_app_dir }}/prune.sh {{ chiostro_data_dir }}/pad {{ chiostro_keep_checkpoints }}"
+    state: "{{ 'present' if chiostro_store == 'disk' else 'absent' }}"
+  when: "'pad' in chiostro_config.apps"
+
+- name: Where the store lives (disk or bucket), included by the vhost
+  ansible.builtin.template:
+    src: store.conf.j2
+    dest: /etc/nginx/snippets/chiostro-store.conf
+    owner: root
+    group: root
+    mode: "0600"   # holds the bucket secret
+  notify: reload nginx
+
+- name: Expire idle rooms and prune checkpoints in the bucket (expire.lua, on the loopback)
+  ansible.builtin.cron:
+    name: "chiostro bucket expiry {{ chiostro_domain }}"
+    special_time: daily
+    job: "curl -sk -H 'Host: {{ chiostro_domain }}' 'https://127.0.0.1/_expire?{{ chiostro_expiry_days | dict2items | map(attribute='key') | zip(chiostro_expiry_days | dict2items | map(attribute='value')) | map('join', '=') | join('&') }}&keep={{ chiostro_keep_checkpoints }}' > /dev/null"
+    state: "{{ 'present' if chiostro_store == 's3' else 'absent' }}"
+
+- name: Expire idle rooms on disk, per app (a room's last write is its index's mtime)
+  ansible.builtin.cron:
+    name: "chiostro store expiry {{ chiostro_domain }} {{ item.key }}"
+    special_time: daily
+    job: >-
+      find {{ chiostro_data_dir }}/{{ item.key }} -name '*.index' -mtime +{{ item.value }}
+      -exec sh -c 'rm -f "${1%.index}".*' _ {} \;
+    state: "{{ 'present' if chiostro_store == 'disk' else 'absent' }}"
+  loop: "{{ chiostro_expiry_days | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}: {{ item.value }} days"
+
+- name: TeX Live bundle for PDF export (tstex reads it from /texmf/)
+  ansible.builtin.copy:
+    src: "{{ chiostro_texmf_src }}/"
+    dest: "{{ chiostro_web_dir }}/texmf/"
+    owner: root
+    group: root
+    mode: "u=rwX,go=rX"
+  when: chiostro_texmf_src | length > 0
+
+- name: Deployment config (data, not part of the signed bundle)
+  ansible.builtin.copy:
+    content: "{{ chiostro_config | to_nice_json }}\n"
+    dest: "{{ chiostro_web_dir }}/config.json"
+    owner: root
+    group: root
+    mode: "0644"
+
+# --- TLS: self-signed bootstrap so nginx 443 can load, then issue via Let's Encrypt ---
+- name: Check for an existing cert
+  ansible.builtin.stat:
+    path: "{{ chiostro_ssl_cert }}"
+  register: _cert
+
+- name: Bootstrap a self-signed cert so nginx 443 can load before issuance
+  ansible.builtin.command:
+    cmd: >-
+      openssl req -x509 -newkey rsa:2048 -nodes -days 2
+      -subj "/CN={{ chiostro_domain }}" -addext "subjectAltName=DNS:{{ chiostro_domain }}"
+      -keyout {{ chiostro_ssl_key }} -out {{ chiostro_ssl_cert }}
+    creates: "{{ chiostro_ssl_cert }}"
+  when: not _cert.stat.exists
+
+- name: Lock down the bootstrap key
+  ansible.builtin.file:
+    path: "{{ chiostro_ssl_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+  when: not _cert.stat.exists and not ansible_check_mode   # the key only exists once the bootstrap ran
+
+# --- nginx vhost ---
+- name: Render vhost
+  ansible.builtin.template:
+    src: vhost.conf.j2
+    dest: "/etc/nginx/sites-available/{{ chiostro_domain }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: reload nginx
+
+- name: Enable vhost
+  ansible.builtin.file:
+    src: "/etc/nginx/sites-available/{{ chiostro_domain }}.conf"
+    dest: "/etc/nginx/sites-enabled/{{ chiostro_domain }}.conf"
+    state: link
+    force: true   # check mode: the target is rendered in the same run
+  notify: reload nginx
+
+- name: Reload nginx now so http-01 is live
+  ansible.builtin.meta: flush_handlers
+
+- name: Issue real TLS cert (Let's Encrypt)
+  ansible.builtin.command:
+    cmd: >-
+      {{ chiostro_acme_sh }} --issue --server letsencrypt
+      -d {{ chiostro_domain }} -w {{ chiostro_acme_webroot }}
+      --fullchain-file {{ chiostro_ssl_cert }} --key-file {{ chiostro_ssl_key }}
+    creates: "/root/.acme.sh/{{ chiostro_domain }}/{{ chiostro_domain }}.cer"   # this acme.sh issues RSA (no _ecc dir); acme.sh itself skips when not due
+  register: _acme
+  changed_when: _acme.rc == 0
+  failed_when: false
+  notify: reload nginx

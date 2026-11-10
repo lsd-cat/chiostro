@@ -1,0 +1,16 @@
+{
+  "name": "Chiostro",
+  "tagline": "",
+  "logo": "",
+  "intro": "",
+  "links": [],
+  "server": "",
+  "apps": ["meet", "when", "pad", "share", "form"],
+  "media": "relay",
+  "iceServers": [{"urls": "stun:stun.l.google.com:19302"}],
+  "theme": {
+    "light": {"accent": "#be1e2d", "font": "16px/1.4 \"Helvetica Neue\", Helvetica, Arial, sans-serif"},
+    "dark": {"accent": "#ff5c6c", "font": "16px/1.4 \"Helvetica Neue\", Helvetica, Arial, sans-serif"}
+  },
+  "extensions": {"agenda": true}
+}

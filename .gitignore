@@ -1,0 +1,9 @@
+/target
+node_modules
+dist
+openresty/logs
+openresty/*.pid
+openresty/*_temp
+openresty/data
+config.json
+openresty/texmf

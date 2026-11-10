@@ -1,0 +1,5 @@
+#polloptions { display: grid; gap: 6px; }
+#polloptions .option { position: relative; display: flex; justify-content: space-between; text-align: start; border-radius: 8px; overflow: hidden; }
+#polloptions .option::before { content: ""; position: absolute; inset: 0; width: var(--pct); background: var(--accent); opacity: .25; z-index: 0; }
+#polloptions .option span, #polloptions .option b { position: relative; z-index: 1; }
+#polloptions .option[aria-pressed="true"] { border-color: var(--accent); }

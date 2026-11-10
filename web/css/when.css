@@ -1,0 +1,65 @@
+/* Scheduling app: layout on top of /style.css tokens. The grid is crab.fit's, drawn with theme variables. */
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.row.between { justify-content: space-between; align-items: center; }
+.row.center { justify-content: center; }
+.row > label { flex: 1; min-width: 120px; }
+.tz { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.tz b { color: var(--fg); font-weight: 500; }
+.tz button { padding: 4px 10px; font-size: 13px; }
+.tz select { max-width: 60vw; }
+.segmented { min-width: 280px; }
+
+#cal { display: grid; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.calhead { display: flex; justify-content: space-between; align-items: center; }
+#days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+#days small { font-size: 12px; }
+#days button { padding: 7px 0; min-height: 36px; border-radius: var(--radius-panel); background: transparent; }
+#days button:hover { background: var(--panel-2); }
+#days button[aria-pressed="true"], #days button[aria-pressed="true"]:hover { background: var(--accent); color: var(--accent-fg); }   /* the id rule above outranks the shared pressed rule */
+
+#event { width: min(1200px, 94cqw); margin: min(6vh, 40px) auto; }   /* bounded like the other cards, wider for the grid; many columns scroll inside it */
+#you, #group { display: grid; gap: 12px; justify-items: center; width: 100%; }   /* the card centres its children; the grid still wants the whole width */
+#sent { margin: 0; }
+#sent:empty { display: none; }
+#answer { display: grid; gap: 6px; justify-items: center; width: 100%; }
+#who { margin: 0; min-height: 1.4em; font-size: 13px; color: var(--muted); text-align: center; }
+#bestbox { font-size: 14px; justify-self: stretch; display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+#bestbox:has(ul:empty) { display: none; }
+#best { margin: 0; padding: 0; list-style: none; display: flex; gap: 6px 16px; flex-wrap: wrap; }
+#people { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 0; padding: 0; list-style: none; }
+#people:empty { display: none; }
+#people li { padding: 2px 10px; background: var(--tint); border-radius: 999px; font-size: 13px; }
+.legend { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.legend .bar { width: 140px; height: 12px; border-radius: 6px; background: linear-gradient(in oklch to right, var(--panel), var(--accent)); }
+
+/* The grid, as crab.fit draws it: a time column stuck to the left, one column per date with its
+   header stuck to the top, quarter-hour cells of a fixed height (an hour is 48px), hour lines
+   solid, half hours dotted. Columns never squeeze: the grid scrolls both ways inside the card. */
+.grid { --q: 12px; --colw: 72px; --head: 44px; display: flex; align-items: flex-start; justify-content: safe center; width: 100%; max-height: max(320px, calc(100dvh - 330px)); overflow: auto; padding: 0 8px 8px 0; touch-action: none; user-select: none; -webkit-user-select: none; scroll-snap-type: x proximity; scrollbar-gutter: stable; background: var(--panel); border-radius: var(--radius-panel); }
+.labels { flex: none; width: 60px; position: sticky; left: 0; z-index: 3; background: var(--panel); padding-top: var(--head); display: flex; flex-direction: column; }
+.labels .slot { border: 0; background: none; }
+.labels span { position: absolute; right: 8px; top: 0; translate: 0 -50%; font-size: 12px; line-height: 1; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+.col { flex: 1 0 var(--colw); max-width: 220px; scroll-snap-align: start; display: flex; flex-direction: column; text-align: center; }
+.col .head { position: sticky; top: 0; z-index: 2; height: var(--head); display: grid; align-content: center; background: var(--panel); }
+.col small, .col b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col small { font-size: 12px; }
+.col b { font-size: 14px; }
+.spacer { width: 10px; flex: none; }
+.times { display: flex; flex-direction: column; border: 1px solid var(--muted); border-top: 0; }
+.col + .col .times { border-left: 0; }
+.times.first { border-radius: 4px 0 0 4px; } .times.last { border-radius: 0 4px 4px 0; } .times.first.last { border-radius: 4px; }
+.slot { height: var(--q); min-height: 0; position: relative;   /* a cell is a button, but not a 40px one */ border: 0; border-top: 1px solid var(--muted); border-radius: 0; background: var(--bg); padding: 0; margin: 0; display: block; width: 100%; }
+.slot.q { border-top-color: color-mix(in oklch, var(--border) 50%, transparent); }
+.slot.half { border-top: 1px dotted var(--muted); }
+.slot.gap { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--border) 4px, var(--border) 8px); }
+button.cell { cursor: pointer; }
+button.cell:hover { background: var(--tint-2); }
+button.cell[aria-pressed="true"], button.cell[aria-pressed="true"]:hover { background: var(--accent); }
+button.cell:disabled { cursor: default; }
+button.cell:focus-visible { outline: 2px solid var(--fg); outline-offset: -2px; z-index: 1; }
+#heat .cell { background: color-mix(in oklch, var(--accent) calc(var(--p, 0) * 85%), var(--panel)); }
+/* who is free, as a tooltip drawn from the title the cell already carries */
+#heat .cell:hover::after { content: attr(title); position: absolute; inset-inline-start: 50%; bottom: calc(100% + 6px); translate: -50% 0; z-index: 4; padding: 4px 10px; border-radius: 6px; white-space: nowrap; background: var(--fg); color: var(--bg); font-size: 12px; pointer-events: none; }
+#heat .cell:hover { outline: 2px solid var(--fg); outline-offset: -2px; z-index: 1; }
+@container (max-width: 700px) { .grid { --colw: 56px; --q: 11px; } }
+@media (forced-colors: active) { button.cell[aria-pressed="true"] { background: Highlight; } #heat .cell { background: color-mix(in srgb, Highlight calc(var(--p, 0) * 100%), Canvas); } }

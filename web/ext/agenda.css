@@ -1,0 +1,5 @@
+#agendalist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+#agendalist li { display: flex; align-items: center; gap: 8px; }
+#agendalist li span { flex: 1; } #agendalist li .done { text-decoration: line-through; color: var(--muted); }
+#timerform input[type="number"] { width: 5em; }
+#agendab.over { color: var(--danger); }

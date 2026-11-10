@@ -1,0 +1,22 @@
+# The store on an S3-compatible bucket: copy to store.conf and fill in. Keep this file 0600, it holds the secret.
+set $data "";
+set $s3_host "s3.eu-south-mil.io.cloud.ovh.net";   # the endpoint host, which also goes into proxy_pass and the Host header below
+set $s3_bucket "chiostro-store";
+set $s3_region "eu-south-mil";
+set $s3_key "ACCESS_KEY";
+set $s3_secret "SECRET_KEY";
+# The signed subrequests from s3.lua go through here: path-style, the bucket in the path.
+location ^~ /_s3/ {
+  internal;
+  proxy_pass https://s3.eu-south-mil.io.cloud.ovh.net/chiostro-store/;
+  proxy_http_version 1.1;
+  proxy_set_header Host s3.eu-south-mil.io.cloud.ovh.net;
+  proxy_set_header Connection "";
+  proxy_ssl_server_name on;
+  proxy_ssl_verify on;
+  proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+  proxy_hide_header x-amz-request-id; proxy_hide_header x-amz-id-2;
+  proxy_hide_header Content-Type; proxy_hide_header Content-Disposition;   # a blob is bytes whatever the uploader called it: never a page on this origin
+  add_header Content-Type application/octet-stream always; add_header Content-Disposition attachment always; add_header X-Content-Type-Options nosniff always;
+  add_header Cache-Control "private, max-age=31536000, immutable";   # an object never changes
+}

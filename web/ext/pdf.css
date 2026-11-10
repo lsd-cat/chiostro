@@ -1,0 +1,8 @@
+#pdfask { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
+#pdf { flex: 2; display: flex; flex-direction: column; min-height: 0; }
+#pdfbar { display: flex; gap: 6px; align-items: center; padding: 6px 8px; }
+#pdfbar button { padding: 4px 10px; }
+#pdfname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pdfview { flex: 1; position: relative; min-height: 0; }
+#pdfframe { width: 100%; height: 100%; border: 0; background: #fff; }
+#pdfopen { display: grid; place-items: center; height: 100%; color: var(--accent); font-size: 18px; }

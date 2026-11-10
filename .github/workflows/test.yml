@@ -2,7 +2,7 @@ name: tests
 on: [push, pull_request]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # OpenResty publishes packages per Ubuntu release; noble is the newest it has
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -11,8 +11,9 @@ jobs:
       - run: npm run build
       - name: OpenResty
         run: |
+          set -euo pipefail
           wget -qO - https://openresty.org/package/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/openresty.gpg
-          echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
+          echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/ubuntu noble main" | sudo tee /etc/apt/sources.list.d/openresty.list
           sudo apt-get update -qq && sudo apt-get install -y -qq openresty
           echo /usr/local/openresty/bin >> "$GITHUB_PATH"
           mkdir -p openresty/data/{tmp,meet,p2p,when,pad,share,form} openresty/logs

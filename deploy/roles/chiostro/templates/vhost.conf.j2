@@ -13,8 +13,8 @@ server {
 }
 
 server {
-	listen 443 ssl http2;
-	listen [::]:443 ssl http2;
+	listen 443 ssl;   # HTTP/1.1 only: the Lua module's subrequests (the bucket store's signed calls) do not run on HTTP/2 requests
+	listen [::]:443 ssl;
 	server_name {{ chiostro_domain }};   # one bundle, one config: the path picks the tool
 
 	access_log off;   # a call relay: no per-request logging of who talks to whom
@@ -39,6 +39,8 @@ server {
 	types { text/html html; text/css css; text/javascript js; application/json json; image/svg+xml svg; image/png png; image/webp webp; }
 	default_type application/octet-stream;
 
+	error_page 404 /errors/404.html; error_page 429 /errors/429.html; error_page 500 502 503 504 /errors/50x.html;
+	location ^~ /errors/ { internal; }   # the pages above, only as error responses
 	location = / { try_files /index.html =404; }               # the shell: the landing page
 	location ~ "^/[a-z]+/$" { try_files /index.html =404; }   # every tool is the same shell; the path picks the module
 	location = /config.json { try_files /config.json =404; }

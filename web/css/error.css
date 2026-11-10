@@ -1,0 +1,6 @@
+/* Error pages: served by nginx for 404 and 5xx, styled with the site's tokens, no script. */
+.error { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
+.error img { height: 120px; }
+.error h1 { font-size: 28px; margin: 0; }
+.error p { max-width: 46ch; color: var(--muted); }
+.error code { font: inherit; background: var(--panel-2); padding: 0 5px; border-radius: 4px; }

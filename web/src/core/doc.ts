@@ -32,6 +32,7 @@ export class Doc<S, O> {
   onExtra?: (x: unknown) => void;      // ...and restored from them
   onStatus?: () => void;               // ready / peers / saved changed
   saved: 'idle' | 'saving' | 'saved' | 'failed' = 'idle';
+  storeDown = false;   // the sequencer could not store a checkpoint: everyone pauses editing until it can, so nothing typed is lost
   readonly peers = new Set<number>();
   private inflight: O | null = null;
   private buffer: O[] = [];
@@ -57,6 +58,7 @@ export class Doc<S, O> {
     const ready = sig.onReady;   // Sync owns the hello; we only need to know when we are alone
     sig.onReady = peers => { ready?.(peers); if (!peers.length) this.becomeReady(); else setTimeout(() => { if (!this.ready && this.isHost) this.becomeReady(); }, 4000); };
     sig.on('op', (from, m) => this.onOp(from, m.v as number, m.op as O, m.from as number | undefined));
+    sig.on('store', (from, m) => { if (from === this.hostId && this.storeDown !== !m.ok) { this.storeDown = !m.ok; this.onStatus?.(); } });   // the sequencer's word on the store
     sig.on('resync', (from, m) => { if (m.state) { if (from === this.hostId) this.adopt(m.state as {state: S; v: number; x?: unknown}); } else if (this.isHost) sig.send(from, {t: 'resync', state: {state: this.state, v: this.version, x: this.extra?.()}}); });
   }
 
@@ -166,6 +168,10 @@ export class Doc<S, O> {
     const x = this.extra?.(), payload = JSON.stringify({state, x});
     const status = await this.store.put(slot, {state, x, ...(this.sign && {sig: await this.sign(payload)})});
     if (status < 300) { this.lastSaved = state; this.lastSaveAt = Date.now(); }
-    this.saved = status < 300 ? 'saved' : 'failed'; this.onStatus?.();
+    this.saved = status < 300 ? 'saved' : 'failed';
+    const down = status >= 300 && status !== 409;   // 409 is a slot clash, not a store failure
+    if (down !== this.storeDown) { this.storeDown = down; this.core.sig.send('*', {t: 'store', ok: !down}); }
+    if (down) { clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => this.save(), 10000) as unknown as number; }   // try again until the store is back
+    this.onStatus?.();
   }
 }

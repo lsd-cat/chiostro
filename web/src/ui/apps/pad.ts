@@ -337,9 +337,9 @@ editor.addEventListener('focus', () => { cursorSent = ''; sendCursor(); });   //
 core.sig.on('author', (from, m) => { authorOf.set(from, String(m.key).slice(0, 60)); });
 const prevJoin = core.roster.onJoin; core.roster.onJoin = (id, i) => { prevJoin?.(id, i); core.sig.send(id, {t: 'author', key: me()}); };
 refresh = () => {
-  editor.readOnly = !doc.ready || histSlot !== null;
+  editor.readOnly = !doc.ready || histSlot !== null || doc.storeDown;   // a store that cannot keep the text pauses editing, so nothing typed is lost
   const names = [...doc.peers].map(p => core.roster.nameOf(p)).concat(t('you'));
-  const save = !doc.ready ? t('syncing') : doc.saved === 'saving' ? t('saving') : doc.saved === 'failed' ? t('saveFailed') : doc.saved === 'saved' ? t('saved') : '';
+  const save = doc.storeDown ? t('storeDown') : !doc.ready ? t('syncing') : doc.saved === 'saving' ? t('saving') : doc.saved === 'failed' ? t('saveFailed') : doc.saved === 'saved' ? t('saved') : '';
   status(t('online', {n: names.length, names: names.join(', ')}) + (save ? ` · ${save}` : ''));
 };
 doc.onStatus = refresh;

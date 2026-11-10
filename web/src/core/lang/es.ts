@@ -231,6 +231,7 @@ const dict: Record<string, string> = {
   saved: "Guardado",   // "Saved" — core/doc; pad
   saving: "Guardando…",   // "Saving…" — core/doc; pad
   saveFailed: "No guardado: demasiado grande o rechazado",   // "Not saved: too large or the store refused" — pad
+  storeDown: "El servidor no puede guardar el texto ahora. La edición está en pausa; el texto se queda aquí y el guardado se reanudará cuando se pueda.",   // "The server cannot store the text right now. Editing is paused; your text stays here and saving resumes when it can." — pad
   placeholder: "# Título\n\nEscribe markdown aquí. Quien tenga el enlace edita el mismo texto, cifrado de extremo a extremo.\n\n---\n\nUna línea con --- empieza una nueva diapositiva.",   // "# Title\n\nWrite markdown here. Everyone with the link edits the same text, encrypted end to end.\n\n---\n\nA line with --- starts a new slide." — pad
   slideOf: "Diapositiva {n} de {total}",   // "Slide {n} of {total}" — pad
   exit: "Salir (Esc)",   // "Exit (Esc)" — pad; form markup: <button #fpexit>; pad markup: <button #exit>

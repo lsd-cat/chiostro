@@ -231,6 +231,7 @@ const dict: Record<string, string> = {
   saved: "已保存",   // "Saved" — core/doc; pad
   saving: "保存中…",   // "Saving…" — core/doc; pad
   saveFailed: "未保存：太大或被服务器拒绝",   // "Not saved: too large or the store refused" — pad
+  storeDown: "服务器目前无法保存文本。编辑已暂停；文本仍保留在此，恢复后将继续保存。",   // "The server cannot store the text right now. Editing is paused; your text stays here and saving resumes when it can." — pad
   placeholder: "# 标题\n\n在这里写 Markdown。持有链接的人编辑同一文本，端到端加密。\n\n---\n\n以 --- 开头的一行开始新的幻灯片。",   // "# Title\n\nWrite markdown here. Everyone with the link edits the same text, encrypted end to end.\n\n---\n\nA line with --- starts a new slide." — pad
   slideOf: "第 {n} 张，共 {total} 张",   // "Slide {n} of {total}" — pad
   exit: "退出 (Esc)",   // "Exit (Esc)" — pad; form markup: <button #fpexit>; pad markup: <button #exit>

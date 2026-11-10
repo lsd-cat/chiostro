@@ -67,7 +67,7 @@ requires a TeX bundle: symlink `openresty/texmf` to the `bundles/minimal` direct
 
 ```sh
 npm test       # unit tests, relay protocol in both store modes, a 40-peer load test
-npm run e2e    # each tool in headless Chrome, hostile peers, time zones, chaos, accessibility
+npm run e2e    # each tool in headless Chrome, hostile peers, time zones, chaos, stress, accessibility
 ```
 
 A browser run fails on a CSP violation, an uncaught exception or a console error.

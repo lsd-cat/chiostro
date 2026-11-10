@@ -5,7 +5,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json && tsc -p tsconfig.worker.json && cp -r web/index.html web/style.css web/css web/ext dist/ && mkdir -p dist/vendor && cp -r node_modules/@lsd-cat/tstex/dist dist/vendor/tstex",
     "test": "node --test --test-timeout=60000 --test-force-exit --test-concurrency=1 test/*.test.mjs",
-    "e2e": "node test/home.e2e.mjs && node test/e2e.mjs && node test/when.e2e.mjs && node test/grid.e2e.mjs && node test/pad.e2e.mjs && node test/share.e2e.mjs && node test/form.e2e.mjs && node test/fedi.e2e.mjs && node test/integrations.e2e.mjs && node test/media.e2e.mjs && node test/features.e2e.mjs && node test/workflow.e2e.mjs && node test/latex.e2e.mjs && node test/comments.e2e.mjs && node test/hostile.e2e.mjs && node test/zones.e2e.mjs && node test/chaos.e2e.mjs && node test/a11y.e2e.mjs"
+    "e2e": "node test/home.e2e.mjs && node test/e2e.mjs && node test/when.e2e.mjs && node test/grid.e2e.mjs && node test/pad.e2e.mjs && node test/share.e2e.mjs && node test/form.e2e.mjs && node test/fedi.e2e.mjs && node test/integrations.e2e.mjs && node test/media.e2e.mjs && node test/features.e2e.mjs && node test/workflow.e2e.mjs && node test/latex.e2e.mjs && node test/comments.e2e.mjs && node test/hostile.e2e.mjs && node test/zones.e2e.mjs && node test/chaos.e2e.mjs && node test/stress.e2e.mjs && node test/a11y.e2e.mjs"
   },
   "devDependencies": {
     "@lsd-cat/tstex": "^0.1.0",

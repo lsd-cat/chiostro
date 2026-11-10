@@ -1,0 +1,23 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: npm ci
+      - run: npm run build
+      - name: OpenResty
+        run: |
+          wget -qO - https://openresty.org/package/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/openresty.gpg
+          echo "deb [signed-by=/usr/share/keyrings/openresty.gpg] http://openresty.org/package/ubuntu $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/openresty.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq openresty
+          echo /usr/local/openresty/bin >> "$GITHUB_PATH"
+          mkdir -p openresty/data/{tmp,meet,p2p,when,pad,share,form} openresty/logs
+          /usr/local/openresty/bin/openresty -p "$PWD/openresty" -c nginx.conf
+      - run: npm test
+      - name: Browser suites (landing, pad, hostile peers)
+        env: {CHROME: /usr/bin/google-chrome}
+        run: node test/home.e2e.mjs && node test/pad.e2e.mjs && node test/hostile.e2e.mjs

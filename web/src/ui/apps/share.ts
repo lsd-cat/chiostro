@@ -15,6 +15,7 @@ const signed = await joinSigned(nameOf(), 'share'), core = signed.core, viewing 
 core.sig.connect();
 const files = new Files(core.store);
 files.sign = signed.sign; files.verify = signed.verify;
+if (viewing) document.querySelector('[data-i18n="shareSubtitle"]')!.textContent = t('shareSubtitleView');   // the view link is already the read-only one
 if (!viewing) files.deleteKey = async id => hex(await sess.derive(`share/delete/${id}`, 32));
 if (!viewing) {
   actions.prepend(viewLinkButton(() => signed.viewLink));

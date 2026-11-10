@@ -37,6 +37,7 @@ function applyTheme(cfg: Config, dark: boolean) {   // theme values are CSS cust
 if (localStorage.getItem('theme')) root.dataset['theme'] = localStorage.getItem('theme')!;
 applyTheme(config, isDark());
 matchMedia('(prefers-color-scheme: dark)').onchange = () => applyTheme(config, isDark());
+new MutationObserver(() => applyTheme(config, isDark())).observe(root, {attributes: true, attributeFilter: ['data-theme']});   // whoever flips data-theme gets that scheme's accent too
 for (const b of document.querySelectorAll<HTMLButtonElement>('button.theme')) b.onclick = () => { root.dataset['theme'] = isDark() ? 'light' : 'dark'; localStorage.setItem('theme', root.dataset['theme']); applyTheme(config, isDark()); };
 
 // --- the meeting's secret, and the way to its siblings ---

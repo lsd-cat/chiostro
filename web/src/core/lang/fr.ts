@@ -242,7 +242,8 @@ const dict: Record<string, string> = {
   viewCopied: "✅ Lien de lecture copié",   // "✅ View link copied" — header, shared
   readOnly: "Lecture seule",   // "Read-only view" — pad; files page
   noHead: "Ce pad n’a pas encore de clé d’édition ; ouvrez d’abord le lien d’édition.",   // "This pad has no editor key yet; open the edit link first." — pad
-  shareSubtitle: "Chiffré dans votre navigateur. Toute personne ayant le lien peut ajouter et télécharger.",   // "Encrypted in your browser. Anyone with the link can add and download." — files page markup: <small>
+  shareSubtitle: "Chiffré dans votre navigateur. Toute personne ayant le lien peut ajouter et télécharger.",   // "Encrypted in your browser. Anyone with the link can add and download." — files page markup; files page; files page markup: <small>
+  shareSubtitleView: "Lecture seule. Les fichiers sont déchiffrés dans votre navigateur au téléchargement.",   // "Read-only view. Files are decrypted in your browser when you download them." — files page
   dropLabel: "Ajouter des fichiers",   // "Add files" — files page markup: <div #drop>
   dropHint: "Déposez des fichiers ici ou",   // "Drop files here or" — files page markup: <span>
   choose: "choisissez des fichiers",   // "choose files" — files page markup: <span>

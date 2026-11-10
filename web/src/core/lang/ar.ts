@@ -242,7 +242,8 @@ const dict: Record<string, string> = {
   viewCopied: "✅ تم نسخ رابط القراءة",   // "✅ View link copied" — header, shared
   readOnly: "عرض للقراءة فقط",   // "Read-only view" — pad; files page
   noHead: "لا يملك هذا المستند مفتاح تحرير بعد؛ افتح رابط التحرير أولًا.",   // "This pad has no editor key yet; open the edit link first." — pad
-  shareSubtitle: "مشفّر في متصفحك. كل من يملك الرابط يستطيع الإضافة والتنزيل.",   // "Encrypted in your browser. Anyone with the link can add and download." — files page markup: <small>
+  shareSubtitle: "مشفّر في متصفحك. كل من يملك الرابط يستطيع الإضافة والتنزيل.",   // "Encrypted in your browser. Anyone with the link can add and download." — files page markup; files page; files page markup: <small>
+  shareSubtitleView: "عرض للقراءة فقط. تُفكّ الملفات في متصفحك عند التنزيل.",   // "Read-only view. Files are decrypted in your browser when you download them." — files page
   dropLabel: "إضافة ملفات",   // "Add files" — files page markup: <div #drop>
   dropHint: "أفلت الملفات هنا أو",   // "Drop files here or" — files page markup: <span>
   choose: "اختر ملفات",   // "choose files" — files page markup: <span>

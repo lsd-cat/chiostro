@@ -28,7 +28,7 @@ export class Roster {
       const p = this.peer(id);
       p.name = String(m.name).slice(0, 40);
       this.onName?.(id, p.name);
-      p.pair = await pairKey(ecdh.priv, b64u.dec(String(m.pub)), 'e2ecall/pair');
+      p.pair = await pairKey(ecdh.priv, b64u.dec(String(m.pub)), 'chiostro/pair');
       if (p.fresh) { p.fresh = false; this.rotateSenderKey(); }   // a newcomer gets a new key, never the one our earlier frames used
       else this.sendSenderKey(id);
     });

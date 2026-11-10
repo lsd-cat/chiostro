@@ -34,7 +34,7 @@ export class Signaling {
   private ctr = 0;
   private lastSeen = new Map<number, number>();   // sender id -> highest counter accepted
 
-  /** `server`: ws(s) origin of the relay, e.g. "wss://meet.example.org"; `app`: the room's namespace there. */
+  /** `server`: ws(s) origin of the relay, e.g. "wss://chiost.ro"; `app`: the room's namespace there. */
   /** `key` null: listen only (store notices, joins); nothing can be sent or read. */
   constructor(private key: CryptoKey | null, readonly app: string, readonly roomId: string, private server: string) { this.sendQ = this.open; }
 

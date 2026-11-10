@@ -24,14 +24,14 @@ import {deriveAes, ecdhKeypair, pairKey, u32, concat} from '../dist/core/crypto.
 test('HKDF domain separation and ECDH pairwise agreement', async () => {
   const link = crypto.getRandomValues(new Uint8Array(16));
   const msg = new TextEncoder().encode('x');
-  const sig1 = await deriveAes(link, 'e2ecall/signaling'), sig2 = await deriveAes(link, 'e2ecall/signaling');
+  const sig1 = await deriveAes(link, 'chiostro/signaling'), sig2 = await deriveAes(link, 'chiostro/signaling');
   assert.deepEqual(await open(sig2, await seal(sig1, msg)), msg);                      // same ikm+info -> same key
   await assert.rejects(open(await deriveAes(link, 'other'), await seal(sig1, msg)));   // different info -> different key
   const a = await ecdhKeypair(), b = await ecdhKeypair();
-  const ab = await pairKey(a.priv, b.pub, 'e2ecall/pair'), ba = await pairKey(b.priv, a.pub, 'e2ecall/pair');
+  const ab = await pairKey(a.priv, b.pub, 'chiostro/pair'), ba = await pairKey(b.priv, a.pub, 'chiostro/pair');
   assert.deepEqual(await open(ba, await seal(ab, msg)), msg);                          // both sides agree
   const c = await ecdhKeypair();
-  await assert.rejects(open(await pairKey(c.priv, a.pub, 'e2ecall/pair'), await seal(ab, msg)));   // third party cannot
+  await assert.rejects(open(await pairKey(c.priv, a.pub, 'chiostro/pair'), await seal(ab, msg)));   // third party cannot
   assert.deepEqual([...u32(258)], [0, 0, 1, 2]);
   assert.deepEqual([...concat(new Uint8Array([1]), new Uint8Array([2, 3]))], [1, 2, 3]);
 });

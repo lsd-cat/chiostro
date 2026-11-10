@@ -75,7 +75,7 @@ function decode(m) {
 }
 
 test('short and long links round-trip through an independent decoder', () => {
-  for (const text of ['A', 'http://127.0.0.1:8080/pad/#vcwHtM8dn-WMzBSDj4KvZw', 'https://meet.example.org/form/?view#' + 'x'.repeat(22) + '.' + 'y'.repeat(43), 'é'.repeat(100), 'z'.repeat(400)]) {
+  for (const text of ['A', 'http://127.0.0.1:8080/pad/#vcwHtM8dn-WMzBSDj4KvZw', 'https://chiost.ro/form/?view#' + 'x'.repeat(22) + '.' + 'y'.repeat(43), 'é'.repeat(100), 'z'.repeat(400)]) {
     const m = qr(text);
     assert.equal(m.length % 4, 1); assert.equal(m.length, m[0].length);
     const got = decode(m);

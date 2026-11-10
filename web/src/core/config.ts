@@ -12,7 +12,7 @@ const SAFE_VALUE = /^[\w\s#%.,()/"'-]{1,200}$/;
 const UNSAFE = /url\s*\(|expression|@|\\|;|\{|\}/i;
 const SAFE_URL = /^(\/[\w./-]*|https:\/\/[\w.-]+(:\d+)?(\/[\w./%?=&#-]*)?)$/;   // a path on this origin, or an https URL
 
-export const DEFAULTS: Config = {name: 'meet', tagline: '', logo: '', intro: '', links: [], texmf: '/texmf/', server: '', apps: ['meet', 'when', 'pad', 'share', 'form'], media: 'relay', iceServers: [{urls: 'stun:stun.l.google.com:19302'}], theme: {light: {}, dark: {}}, extensions: {}};
+export const DEFAULTS: Config = {name: 'Chiostro', tagline: '', logo: '', intro: '', links: [], texmf: '/texmf/', server: '', apps: ['meet', 'when', 'pad', 'share', 'form'], media: 'relay', iceServers: [{urls: 'stun:stun.l.google.com:19302'}], theme: {light: {}, dark: {}}, extensions: {}};
 
 /** Theme variables from untrusted input: known names, safe values only. */
 export function theme(set: unknown): Theme {

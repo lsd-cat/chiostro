@@ -16,7 +16,7 @@ chiostro_config:
   theme: {light: {}, dark: {}}
 # The upload rate limit keys on the client address: nginx must face clients directly. Behind a load
 # balancer or CDN every client would share one limit; fold X-Forwarded-For into relay.lua first.
-chiostro_connect_src: ""               # extra CSP connect-src origins: another relay ("wss://relay.example.org") and the Fediverse instances pads may snapshot ("https://mastodon.example https://gancio.example")
+chiostro_connect_src: ""               # extra CSP connect-src origins: another relay ("wss://relay.chiost.ro") and the Fediverse instances pads may snapshot ("https://mastodon.example https://gancio.example")
 chiostro_texmf_src: ""                 # a local copy of tstex's bundles/minimal (20 MB) to serve at /texmf/ for PDF export; empty: the pad falls back to the print dialog
 chiostro_frame_src: "https:"           # CSP frame-src for the embed extension; restrict to origins, or "" to disable
 chiostro_force_single_worker: false    # set worker_processes 1 in nginx.conf (correct on a 1-vCPU host)

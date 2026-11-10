@@ -132,6 +132,7 @@ doc.extra = () => { const runs: [string, number][] = []; for (const a of authors
 doc.onExtra = x => { authors = []; if (Array.isArray(x)) for (const r of x as [string, number][]) if (Array.isArray(r) && typeof r[0] === 'string' && Number.isInteger(r[1])) for (let k = 0; k < r[1]; k++) authors.push(r[0]); authors.length = doc.state.length; };   // painted once the editor shows the text
 await doc.load();
 const files = new Files(core.store);   // attachments live in the pad's own room, readable with the view link
+if (!viewing) files.deleteKey = async id => hex(await sess.derive(`pad/delete/${id}`, 32));   // editors can remove; the token never leaves the browser until a removal
 
 // ---------- LaTeX: the engine, a compiled preview, the PDF export, includes ----------
 // tstex, pdfTeX in TypeScript, runs in a worker; its TeX Live files come from `config.texmf`. A pad whose text
@@ -245,6 +246,15 @@ async function renderFiles() {
       }; row.append(ins);
     }
     const dl2 = el('button', t('downloadFile')); dl2.onclick = async () => { const b = await fileBlob(f.id); if (b) download(b, f.name); }; row.append(dl2);
+    if (!viewing) {   // remove for everyone, and take its references out of the text
+      const rm = el('button', t('removeFile'), 'link'); row.append(rm);
+      rm.onclick = async () => {
+        if (!confirm(t('removeFileAsk', {name: f.name}))) return;
+        rm.disabled = true; const st = await files.remove(f.id); if (st !== 204) { rm.disabled = false; status(t('removeFailed', {status: st})); return; }
+        const stripped = editor.value.replace(new RegExp(`!?\\[[^\\]]*\\]\\(file:${f.id}\\)`, 'g'), '');
+        if (stripped !== editor.value) { editor.value = stripped; editor.oninput!(new Event('input')); }
+      };
+    }
     list.append(li);
   }
 }

@@ -8,6 +8,7 @@ import {mkdirSync, writeFileSync, readFileSync, symlinkSync, rmSync} from 'node:
 import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {fakeS3} from './fakes3.mjs';
+import {removalFlow} from './fixtures.mjs';
 
 const S3_PORT = 9900, PORT = 8089, ROOT = process.cwd(), DIR = `/tmp/chiostro-s3-${process.pid}`, BASE = `http://127.0.0.1:${PORT}/`;
 const s3 = fakeS3({bucket: 'test', key: 'AKIATEST', secret: 'testsecret', region: 'eu-test'});
@@ -35,6 +36,7 @@ test('bucket store: write once, get, listing as index, 405 on index', async () =
   assert.equal((await fetch(url('b'.repeat(32)))).status, 404);
   assert.match(await (await fetch(url('index'))).text(), /^\d{13} a{32} 70000\n$/, 'the listing is the index');
   assert.ok(s3.objects.has(`share/${r}.${slot}`), 'stored under the same name the disk would use');
+  await removalFlow(url, assert);
   // a blob is bytes whatever the uploader says: text/html must not come back as a page on this origin
   assert.equal((await fetch(url('e'.repeat(32)), {method: 'PUT', body: '<script>alert(1)</script>', headers: {'content-type': 'text/html'}})).status, 201);
   const page = await fetch(url('e'.repeat(32)));

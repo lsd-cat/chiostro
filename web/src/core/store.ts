@@ -17,10 +17,11 @@ export async function storeKeys(raw: Bytes, label: string): Promise<StoreKeys> {
 }
 
 export class Store {
-  onChange?: (e: Entry) => void;   // a put by anyone
+  onChange?: (e: Entry) => void;   // a put by anyone; size -1: a removal
   constructor(private sig: Signaling, private keys: StoreKeys, private base = '') {
-    const prev = sig.onPut;   // several stores may share one socket (a room's store and its head): all of them hear every put
+    const prev = sig.onPut, prevDel = sig.onDelete;   // several stores may share one socket (a room's store and its head): all of them hear every put
     sig.onPut = e => { prev?.(e); this.onChange?.(e); };
+    sig.onDelete = slot => { prevDel?.(slot); this.onChange?.({slot, at: Date.now(), size: -1}); };
   }
   private url(slot: string) { return `${this.base}/blob/${this.sig.app}/${this.sig.roomId}/${slot}`; }
 
@@ -32,8 +33,12 @@ export class Store {
   }
 
   /** Sealed bytes. 201 created, 409 the slot exists, 413 room quota, 429 too fast. */
-  async putChunk(slot: string, bytes: Bytes): Promise<number> {
-    return (await fetch(this.url(slot), {method: 'PUT', body: await this.sealBlob(slot, bytes)})).status;
+  async putChunk(slot: string, bytes: Bytes, headers?: Record<string, string>): Promise<number> {
+    return (await fetch(this.url(slot), {method: 'PUT', body: await this.sealBlob(slot, bytes), headers})).status;
+  }
+  /** Remove a manifest slot and its chunks with the token whose hash was sent when it was put. 204, 403, 404. */
+  async remove(slot: string, token: string): Promise<number> {
+    return (await fetch(this.url(slot), {method: 'DELETE', headers: {'X-Delete-Key': token}})).status;
   }
   async getChunk(slot: string): Promise<Bytes | null> {
     const res = await fetch(this.url(slot));
@@ -41,7 +46,7 @@ export class Store {
     return this.openBlob(slot, new Uint8Array(await res.arrayBuffer()));
   }
   /** JSON values, same sealing. */
-  put(slot: string, data: unknown): Promise<number> { return this.putChunk(slot, enc(JSON.stringify(data))); }
+  put(slot: string, data: unknown, headers?: Record<string, string>): Promise<number> { return this.putChunk(slot, enc(JSON.stringify(data)), headers); }
   async get(slot: string): Promise<unknown | null> {
     const b = await this.getChunk(slot);
     if (!b) return null;

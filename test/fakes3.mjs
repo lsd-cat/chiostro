@@ -11,16 +11,18 @@ export function fakeS3({bucket, key: accessKey, secret, region}) {
   const esc = s => encodeURIComponent(s).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
   const verify = (req, body) => {
     const auth = req.headers['authorization'] ?? '', amz = req.headers['x-amz-date'], payload = req.headers['x-amz-content-sha256'];
-    const m = /Credential=([^/]+)\/(\d{8})\/([^/]+)\/s3\/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=([0-9a-f]{64})/.exec(auth);
+    const m = /Credential=([^/]+)\/(\d{8})\/([^/]+)\/s3\/aws4_request, SignedHeaders=([a-z0-9;-]+), Signature=([0-9a-f]{64})/.exec(auth);
+    const signed = m ? m[4].split(';') : [];
     if (!m) return 'no SigV4 authorization header';
     if (m[1] !== accessKey) return 'unknown access key'; if (m[3] !== region) return 'wrong region';
     if (payload !== sha(body)) return 'payload hash mismatch';
     const u = new URL(req.url, 'http://x'), qs = [...u.searchParams.entries()].map(([k, v]) => esc(k) + '=' + esc(v)).sort().join('&');
-    const canon = [req.method, u.pathname, qs, 'host:' + req.headers['host'], 'x-amz-content-sha256:' + payload, 'x-amz-date:' + amz, '', 'host;x-amz-content-sha256;x-amz-date', payload].join('\n');
+    for (const h of Object.keys(req.headers)) if (h.startsWith('x-amz-') && !signed.includes(h)) return 'unsigned ' + h;
+    const canon = [req.method, u.pathname, qs, ...signed.map(h => h + ':' + String(req.headers[h] ?? '').trim()), '', signed.join(';'), payload].join('\n');
     const scope = `${m[2]}/${region}/s3/aws4_request`, toSign = ['AWS4-HMAC-SHA256', amz, scope, sha(canon)].join('\n');
     const kSig = hmac(hmac(hmac(hmac('AWS4' + secret, m[2]), region), 's3'), 'aws4_request');
     const sig = createHmac('sha256', kSig).update(toSign).digest('hex');
-    return sig === m[4] ? null : 'signature mismatch for ' + JSON.stringify(canon);
+    return sig === m[5] ? null : 'signature mismatch for ' + JSON.stringify(canon);
   };
   const server = createServer((req, res) => {
     const chunks = []; req.on('data', c => chunks.push(c)); req.on('end', () => {
@@ -36,8 +38,8 @@ export function fakeS3({bucket, key: accessKey, secret, region}) {
         res.writeHead(200, {'content-type': 'application/xml'}); return res.end(xml);
       }
       const o = objects.get(key);
-      if (req.method === 'PUT') { if (o && req.headers['if-none-match'] === '*') { res.writeHead(412); return res.end('<Error><Code>PreconditionFailed</Code></Error>'); } objects.set(key, {body, at: new Date(), type: req.headers['content-type'] ?? 'binary/octet-stream'}); res.writeHead(200, {etag: '"' + sha(body).slice(0, 32) + '"'}); return res.end(); }
-      if (req.method === 'HEAD') { res.writeHead(o ? 200 : 404, o ? {'content-length': o.body.length} : {}); return res.end(); }
+      if (req.method === 'PUT') { if (o && req.headers['if-none-match'] === '*') { res.writeHead(412); return res.end('<Error><Code>PreconditionFailed</Code></Error>'); } objects.set(key, {body, at: new Date(), type: req.headers['content-type'] ?? 'binary/octet-stream', meta: Object.fromEntries(Object.entries(req.headers).filter(([h]) => h.startsWith('x-amz-meta-')))}); res.writeHead(200, {etag: '"' + sha(body).slice(0, 32) + '"'}); return res.end(); }
+      if (req.method === 'HEAD') { res.writeHead(o ? 200 : 404, o ? {'content-length': o.body.length, ...o.meta} : {}); return res.end(); }
       if (req.method === 'GET') { if (!o) { res.writeHead(404); return res.end('<Error><Code>NoSuchKey</Code></Error>'); } res.writeHead(200, {'content-length': o.body.length, 'content-type': o.type}); return res.end(o.body); }
       if (req.method === 'DELETE') { objects.delete(key); res.writeHead(204); return res.end(); }
       res.writeHead(405); res.end();

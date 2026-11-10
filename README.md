@@ -1,3 +1,5 @@
+<p align="center"><img src="themes/chiostro.svg" width="220" alt="Chiostro"></p>
+
 # Chiostro
 
 Meeting tools with end-to-end encryption: a video call, a date poll, a collaborative document,
@@ -39,7 +41,10 @@ but cannot write as an editor.
   rotated when a member joins or leaves. Receivers drop a frame unless it is newer than the last
   frame received from that sender under the same key.
 - **Store.** Blobs are written once and sealed with the slot name as authenticated data; each room
-  has an index. The write-once rule holds under concurrent puts. Blobs are served as
+  has an index. The write-once rule holds under concurrent puts. The exception is attachments:
+  a file's manifest is stored with the hash of a removal token that only editors can derive from
+  their secret, and a DELETE with that token removes the manifest and its chunks from the server;
+  readers of a view link cannot derive it. Nothing else can be removed before the room expires. Blobs are served as
   `application/octet-stream` with `Content-Disposition: attachment`, regardless of the type sent by
   the uploader. Limits: a quota per room, a rate limit per client address, 8 MB per put.
 - **Read-only links.** Checkpoints and file manifests are verified against the editors' public
@@ -51,7 +56,7 @@ but cannot write as an editor.
   planner's calendar file contains the call's link; an invite link may contain a relay origin or
   TURN credentials; an image hot-linked in a pad is fetched by each reader's browser.
 - **Expiry.** A room is deleted after the configured number of days without a write. Reads do not
-  extend a room's life. There are no accounts, no administrative interface and no delete operation.
+  extend a room's life. There are no accounts and no administrative interface.
 
 ## Run locally
 
@@ -81,7 +86,8 @@ settings are data:
   on this origin or over https, shown on the landing page and in the header), `intro` (a paragraph
   on the landing page), `links` (label and URL pairs in the landing page's footer), `apps`, a default
   relay `server`, `iceServers`, `media` (`relay` or `p2p`), `extensions` enabled by name, `texmf`,
-  and `theme` with CSS variable values for the light and dark schemes. Setting `accent` is
+  and `theme` with CSS variable values for the light and dark schemes. Logos and other assets ship
+  under `themes/` in the bundle (`themes/chiostro.svg` is the project's), or come from any https URL. Setting `accent` is
   sufficient; the other colours are derived in OKLCH. Values that could load a resource or break
   out of a declaration are rejected. TURN credentials placed in this file are visible to all
   visitors.

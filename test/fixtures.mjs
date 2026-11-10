@@ -21,3 +21,20 @@ export function pdfInfo(bytes) {
   const box = /MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)/.exec(text);
   return {pages: (text.match(/\/Type\s*\/Page[^s]/g) ?? []).length, width: box ? +box[1] : 0, height: box ? +box[2] : 0, images: (text.match(/\/Subtype\s*\/Image/g) ?? []).length, attachments: (text.match(/\/Subtype\s*\/FileAttachment/g) ?? []).length, text};
 }
+
+/** The removal protocol against a store door: a manifest with a delete-key hash and one chunk, wrong token 403, no token 403, a chunk alone 405, a slot without a key 404, the right token 204 and everything gone. */
+export async function removalFlow(url, assert) {
+  const {createHash} = await import('node:crypto');
+  const token = 'ab'.repeat(32), keyHash = createHash('sha256').update(token).digest('hex'), mslot = 'c'.repeat(32);
+  assert.equal((await fetch(url(mslot + '.0'), {method: 'PUT', body: 'chunk'})).status, 201);
+  assert.equal((await fetch(url(mslot), {method: 'PUT', body: 'manifest', headers: {'X-Delete-Key': keyHash}})).status, 201);
+  assert.equal((await fetch(url('d'.repeat(32)), {method: 'PUT', body: 'no key'})).status, 201);
+  assert.equal((await fetch(url(mslot), {method: 'DELETE', headers: {'X-Delete-Key': 'ff'.repeat(32)}})).status, 403, 'a wrong token');
+  assert.equal((await fetch(url(mslot), {method: 'DELETE'})).status, 403, 'no token');
+  assert.equal((await fetch(url(mslot + '.0'), {method: 'DELETE', headers: {'X-Delete-Key': token}})).status, 405, 'chunks go with their manifest, never alone');
+  assert.equal((await fetch(url('d'.repeat(32)), {method: 'DELETE', headers: {'X-Delete-Key': token}})).status, 404, 'a blob stored without a key can never be removed');
+  assert.equal((await fetch(url(mslot), {method: 'DELETE', headers: {'X-Delete-Key': token}})).status, 204);
+  assert.equal((await fetch(url(mslot))).status, 404); assert.equal((await fetch(url(mslot + '.0'))).status, 404);
+  const index = await (await fetch(url('index'))).text();
+  assert.doesNotMatch(index, /c{32}/, 'the index forgets it'); assert.match(index, /d{32}/, 'the others stay');
+}

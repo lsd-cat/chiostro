@@ -29,23 +29,34 @@ local function query(args)   -- canonical: sorted, each part URI-encoded
 end
 
 -- Sign a request on this request's headers; the subrequest or exec that follows inherits them.
-local function sign(method, key, qs, body)
+-- `extra`: more headers to send and sign (every x-amz-* header must be signed), lowercase names.
+local function sign(method, key, qs, body, extra)
   local amz = os.date("!%Y%m%dT%H%M%SZ"); local day = amz:sub(1, 8)
   local payload = hex(sha(body or ""))
-  local canon = method .. "\n/" .. cfg.bucket .. "/" .. key .. "\n" .. qs .. "\nhost:" .. cfg.host .. "\nx-amz-content-sha256:" .. payload .. "\nx-amz-date:" .. amz .. "\n\nhost;x-amz-content-sha256;x-amz-date\n" .. payload
+  local headers = {host = cfg.host, ["x-amz-content-sha256"] = payload, ["x-amz-date"] = amz}
+  for k, v in pairs(extra or {}) do headers[k] = v; ngx.req.set_header(k, v) end
+  local names = {}; for k in pairs(headers) do names[#names + 1] = k end; table.sort(names)
+  local canon_headers = {}; for _, k in ipairs(names) do canon_headers[#canon_headers + 1] = k .. ":" .. headers[k] .. "\n" end
+  local signed = table.concat(names, ";")
+  local canon = method .. "\n/" .. cfg.bucket .. "/" .. key .. "\n" .. qs .. "\n" .. table.concat(canon_headers) .. "\n" .. signed .. "\n" .. payload
   local scope = day .. "/" .. cfg.region .. "/s3/aws4_request"
   local to_sign = "AWS4-HMAC-SHA256\n" .. amz .. "\n" .. scope .. "\n" .. hex(sha(canon))
   local sig = hex(hmac(hmac(hmac(hmac(hmac("AWS4" .. cfg.secret, day), cfg.region), "s3"), "aws4_request"), to_sign))
   ngx.req.set_header("x-amz-date", amz)
   ngx.req.set_header("x-amz-content-sha256", payload)
-  ngx.req.set_header("Authorization", "AWS4-HMAC-SHA256 Credential=" .. cfg.key .. "/" .. scope .. ", SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=" .. sig)
+  ngx.req.set_header("Authorization", "AWS4-HMAC-SHA256 Credential=" .. cfg.key .. "/" .. scope .. ", SignedHeaders=" .. signed .. ", Signature=" .. sig)
 end
+M.sha256hex = function(s) return hex(sha(s)) end
 --- A signed subrequest: {status, body}.
-function M.request(method, key, args, body)
+function M.request(method, key, args, body, extra)
   local qs = query(args)
-  sign(method, key, qs, body)
-  return ngx.location.capture("/_s3/" .. key, {method = METHOD[method], args = qs, body = body})
+  sign(method, key, qs, body, extra)
+  local r = ngx.location.capture("/_s3/" .. key, {method = METHOD[method], args = qs, body = body})
+  for k in pairs(extra or {}) do ngx.req.clear_header(k) end   -- not on the next, differently signed, request
+  return r
 end
+--- A response header, whatever its case.
+function M.header(r, name) for k, v in pairs(r.header or {}) do if k:lower() == name then return type(v) == "table" and v[1] or v end end end
 --- Hand the client an object as the response, streamed by nginx.
 function M.stream(key)
   sign("GET", key, "")

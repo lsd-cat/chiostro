@@ -7,7 +7,7 @@
 // it) is in the authenticated data, so the relay cannot hand A's message out as B's either.
 // Binary frames carry media for RelayMedia: client -> server "to(4, 0 = all) | payload",
 // server -> client "from(4) | payload". Payloads are sealed by the sender, see relaymedia.ts.
-// "S <slot> <time> <size>" announces a put into the room's store (store.ts), by anyone.
+// "S <slot> <time> <size>" announces a put into the room's store (store.ts), by anyone; "D <slot>" a removal.
 import {seal, open, b64u, u32, concat, type Bytes} from './crypto.js';
 
 export type Msg = {t: string} & Record<string, unknown>;
@@ -22,6 +22,7 @@ export class Signaling {
   onClose?: () => void;
   onRaw?: (from: number, payload: Bytes) => void;
   onPut?: (e: Entry) => void;                        // someone stored a blob in this room
+  onDelete?: (slot: string) => void;                 // a manifest and its chunks were removed
   private ws!: WebSocket;
   private opened!: () => void;
   private open = new Promise<void>(r => { this.opened = r; });   // everything sent waits for connect()
@@ -82,6 +83,7 @@ export class Signaling {
   private async onServer(data: string) {
     const type = data[0], [idStr = '', rest = ''] = data.slice(2).split(' '), id = +idStr;
     if (type === 'S') { const [slot = '', at = '', size = ''] = data.slice(2).split(' '); this.onPut?.({slot, at: +at, size: +size}); return; }
+    if (type === 'D') { this.onDelete?.(data.slice(2).trim()); return; }
     if (type === 'H') { this.myId = id; this.helloed(); const peers = rest.split(',').filter(Boolean).map(Number); for (const p of peers) this.onJoin?.(p, true); this.onReady?.(peers); }
     else if (type === 'J') this.onJoin?.(id, false);
     else if (type === 'L') this.onLeave?.(id);

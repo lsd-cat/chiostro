@@ -40,6 +40,15 @@ export async function deriveKey(ikm: Bytes, info: string, alg: AesKeyGenParams |
   return crypto.subtle.deriveKey({name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: enc(info)}, hkdf, alg, false, usages);
 }
 
+/** A peer's media keys by key id, in arrival order. Once a frame under `used` decrypts, keys older than the one before it are
+ * gone: a sender that skipped a key (two rotations inside its switch delay) keeps working, and a frame reordered across streams
+ * still finds the previous key. Arrival alone never evicts, except past eight keys. */
+export function pruneRing(ring: Map<number, CryptoKey>, used: number) {
+  const ids = [...ring.keys()], at = ids.indexOf(used);
+  if (at > 1) for (const k of ids.slice(0, at - 1)) ring.delete(k);
+}
+export const RING_MAX = 8;
+
 export type Ecdh = {priv: CryptoKey; pub: Bytes};
 export async function ecdhKeypair(): Promise<Ecdh> {
   const kp = await crypto.subtle.generateKey({name: 'ECDH', namedCurve: 'P-256'}, false, ['deriveBits']);

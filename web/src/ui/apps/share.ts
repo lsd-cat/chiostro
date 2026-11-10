@@ -2,7 +2,8 @@
 // with the link, downloaded and decrypted on request. Images get a preview.
 import {t} from '../../core/i18n.js';
 import {Files, type FileEntry} from '../../core/files.js';
-import {start, joinSigned, viewLinkButton, nameOf, title, status, actions} from '../shell.js';
+import {start, joinSigned, viewLinkButton, nameOf, title, status, actions, sess} from '../shell.js';
+import {hex} from '../../core/crypto.js';
 import {$, el, css, download, dropZone} from '../dom.js';
 import {meter, uploadQueue, bytesLabel} from '../widgets.js';
 
@@ -14,6 +15,7 @@ const signed = await joinSigned(nameOf(), 'share'), core = signed.core, viewing 
 core.sig.connect();
 const files = new Files(core.store);
 files.sign = signed.sign; files.verify = signed.verify;
+if (!viewing) files.deleteKey = async id => hex(await sess.derive(`share/delete/${id}`, 32));
 if (!viewing) {
   actions.prepend(viewLinkButton(() => signed.viewLink));
 } else { document.body.classList.add('viewing'); $('drop').hidden = true; }
@@ -40,6 +42,8 @@ function row(f: FileEntry) {
       else { const m = el(f.type.startsWith('video/') ? 'video' : 'audio'); m.controls = true; m.src = url; m.ariaLabel = f.name; li.append(m); }
     };
   }
+  // last in the row: download, preview, remove
+  if (!viewing) { const rm = el('button', t('removeFile'), 'link'); li.append(rm); rm.onclick = async () => { if (!confirm(t('removeFileAsk', {name: f.name}))) return; rm.disabled = true; const st = await files.remove(f.id); if (st !== 204) { rm.disabled = false; status(t('removeFailed', {status: st})); } }; }
   return li;
 }
 files.onChange = list;

@@ -6,19 +6,20 @@
 // Keyframe is read from the VP8 frame tag (bit 0 of byte 0 == 0) rather than frame.type,
 // which Firefox does not report reliably on the sending side (same trick as Orange Meets).
 // Frames without a usable key are dropped; the decoder recovers at the next keyframe.
-import {importKey, seal, open, type Bytes, type TransformOptions, type KeyMessage} from './core/crypto.js';
+import {importKey, seal, open, pruneRing, RING_MAX, type Bytes, type TransformOptions, type KeyMessage} from './core/crypto.js';
 
 type Frame = RTCEncodedVideoFrame | RTCEncodedAudioFrame;
 
-const keys = new Map<string, Map<number, CryptoKey>>();   // peer -> kid -> key (two newest kept)
+const keys = new Map<string, Map<number, CryptoKey>>();   // peer -> kid -> key, pruned as keys come into use (pruneRing)
 const latest = new Map<string, number>();
 
 onmessage = async ({data: {peer, kid, key}}: MessageEvent<KeyMessage>) => {
   const ring = keys.get(peer) ?? new Map<number, CryptoKey>();
   keys.set(peer, ring);
-  ring.set(kid, await importKey(key));
+  ring.delete(kid); ring.set(kid, await importKey(key));   // newest last
   latest.set(peer, kid);
-  for (const k of ring.keys()) if (k !== kid && k !== (kid + 255) % 256) ring.delete(k);
+  if (peer === 'me') { for (const k of ring.keys()) if (k !== kid) ring.delete(k); }   // we only ever seal with the newest
+  else while (ring.size > RING_MAX) ring.delete(ring.keys().next().value!);
 };
 
 const clearBytes = (frame: Frame, data: Bytes) =>
@@ -49,9 +50,10 @@ onrtctransform = ({transformer}: RTCTransformEvent) => {
           const body = await seal(key, data.subarray(n), header);
           out = new Uint8Array(header.length + body.length); out.set(header); out.set(body, header.length);
         } else {
-          const key = keys.get(peer)?.get(data[n]!);
+          const ring = keys.get(peer), key = ring?.get(data[n]!);
           if (!key) return needKeyframe();
           const header = data.subarray(0, n + 1), body = await open(key, data.subarray(n + 1), header);
+          pruneRing(ring!, data[n]!);
           out = new Uint8Array(n + body.length); out.set(data.subarray(0, n)); out.set(body, n);
         }
         frame.data = out.buffer;

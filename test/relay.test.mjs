@@ -3,6 +3,7 @@
 // index, caps). Needs the server running (E2E_URL, default :8080).
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {removalFlow} from './fixtures.mjs';
 
 const BASE = process.env.E2E_URL ?? 'http://127.0.0.1:8080/';
 const WS = BASE.replace(/^http/, 'ws');
@@ -49,6 +50,7 @@ test('HTTP door: binary chunks, index, write once, peers are told', async t => {
   assert.equal((await fetch(url('index'), {method: 'PUT', body: '1 fake 999999999999\n'})).status, 405, 'the index is never writable');
   assert.equal((await fetch(url('index'), {method: 'DELETE'})).status, 405);
   assert.match(await (await fetch(url('index'))).text(), /^\d{13} a{32}\.0 70000\n$/);
+  await removalFlow(url, assert);
   { const g = await fetch(url('a'.repeat(32) + '.0')); assert.equal(g.headers.get('content-type'), 'application/octet-stream'); assert.equal(g.headers.get('content-disposition'), 'attachment'); assert.equal(g.headers.get('x-content-type-options'), 'nosniff'); }   // a blob is never a page on this origin
   assert.equal((await fetch(`${BASE}blob/share/${room}/..%2Findex`)).status, 404);
   assert.equal((await fetch(url('a'.repeat(32) + '.1'), {method: 'PUT', body: new Uint8Array(9 * 1024 * 1024)})).status, 413);   // one chunk over the per-request cap

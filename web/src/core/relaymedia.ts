@@ -6,7 +6,7 @@
 import type {Signaling} from './signaling.js';
 import type {Roster} from './roster.js';
 import type {Media} from './media.js';
-import {importKey, seal, open, type Bytes} from './crypto.js';
+import {importKey, seal, open, pruneRing, RING_MAX, type Bytes} from './crypto.js';
 import type {FrameSource} from './media.js';
 
 const AUDIO = 0, CAMERA = 1, SCREEN = 2;
@@ -40,9 +40,9 @@ export class RelayMedia implements Media {
     roster.onKey = async (peer, kid, key) => {
       const ring = this.keys.get(peer) ?? new Map<number, CryptoKey>();
       this.keys.set(peer, ring);
-      ring.set(kid, await importKey(key));
-      for (const k of ring.keys()) if (k !== kid && k !== (kid + 255) % 256) ring.delete(k);
-      if (peer === 'me') this.myKid = kid;
+      ring.delete(kid); ring.set(kid, await importKey(key));   // newest last; a peer's ring is pruned as keys come into use (pruneRing)
+      if (peer === 'me') { this.myKid = kid; for (const k of ring.keys()) if (k !== kid) ring.delete(k); }
+      else while (ring.size > RING_MAX) ring.delete(ring.keys().next().value!);
     };
     roster.onJoin = () => { this.forceKey.add(CAMERA).add(SCREEN); };   // newcomers need a keyframe to start
     roster.onLeave = id => this.dropPeer(id);
@@ -145,7 +145,7 @@ export class RelayMedia implements Media {
     if (!fresh(this.last, from, kind, kid, timestamp)) return;   // the relay resending an old frame
     let data: Bytes;
     try { data = await open(key, payload.subarray(7), payload.subarray(0, 7)); } catch { return; }
-    this.last.set(from + ':' + kind, {kid, ts: timestamp});
+    this.last.set(from + ':' + kind, {kid, ts: timestamp}); pruneRing(this.keys.get(String(from))!, kid);
     if (kind === AUDIO) return this.playAudio(d, timestamp, data);
     let v = d.video.get(kind);
     if (!v || v.dec.state === 'closed') {

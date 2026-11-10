@@ -12,7 +12,7 @@
 .tool b { font-size: 17px; }
 .tool span:last-child { color: var(--muted); font-size: 14px; line-height: 1.4; }
 #keynote { text-align: center; color: var(--muted); }
-#homelogo { height: 72px; max-width: min(100%, 320px); object-fit: contain; justify-self: center; }
+#homelogo { height: 150px; max-width: min(100%, 320px); object-fit: contain; justify-self: center; }
 #intro { max-width: 60ch; margin: 0 auto; text-align: center; white-space: pre-line; }
 #homelinks { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; font-size: 14px; }
 #homelinks a { color: var(--muted); } #homelinks a:hover { color: var(--accent); }

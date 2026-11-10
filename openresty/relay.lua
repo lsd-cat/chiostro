@@ -6,6 +6,8 @@
 --   binary client -> server to(4 BE, 0 = all) | payload,  server -> client from(4 BE) | payload
 -- Store, HTTP at /blob/<app>/<id>/<slot>, sealed bytes (nginx spools the body, Lua moves the file):
 --   PUT -> 201 | 409 | 413 | 429, write once;  GET <slot> or GET index -> the file, streamed by nginx.
+--   A PUT may carry X-Delete-Key: sha256 of a token (hex); DELETE <slot> with X-Delete-Key: <token> then removes
+--   that slot and its <slot>.<n> chunks (204 | 403 | 404), and peers hear "D <slot>". Nothing else is ever removed.
 --   Every successful put is announced to the room's peers as "S <slot> <time> <size>".
 -- Disk (store.conf): $data/<app>/<id>.<slot> and $data/<app>/<id>.index (one line per put: time slot size); the
 --   index's mtime is the room's last write, which the expiry cron looks at. Bucket: the same names as object
@@ -50,26 +52,50 @@ local function exists(slot)   -- true, false, or nil when the bucket could not s
   local f = io.open(path .. "." .. slot, "r") if f then f:close() return true end return false
 end
 -- The spooled body becomes the slot: a rename on disk, a signed put to the bucket. nil on failure.
-local function place(slot, body)
+local function place(slot, body, dkey)
   if not s3.enabled then return os.rename(body, path .. "." .. slot) end
   local f = io.open(body, "rb"); local bytes = f:read("*a"); f:close(); os.remove(body)
   ngx.req.set_header("Content-Type", "application/octet-stream")   -- the bucket stores the type it is given: never the uploader's
   ngx.req.set_header("If-None-Match", "*")   -- the bucket's own write-once, where it supports it (a 412 is our 409)
-  local r = s3.request("PUT", key .. "." .. slot, nil, bytes)
+  local r = s3.request("PUT", key .. "." .. slot, nil, bytes, dkey and {["x-amz-meta-delete-key"] = dkey} or nil)
   ngx.req.clear_header("If-None-Match")
   if r.status == 412 then return nil, 409 end
   if r.status ~= 200 then ngx.log(ngx.ERR, "bucket put ", slot, ": ", r.status) return nil, 502 end
   return true
 end
-local function commit(slot, size)   -- after the blob is in place: index line (disk), quota cache
+local function commit(slot, size, dkey)   -- after the blob is in place: index line (disk, with the delete-key hash if any), quota cache
   local now = math.floor(ngx.now() * 1000)
   if not s3.enabled then
     local idx = io.open(path .. ".index", "a")
     if not idx then return nil end
-    idx:write(now, " ", slot, " ", size, "\n"); idx:close()
+    idx:write(now, " ", slot, " ", size, dkey and (" " .. dkey) or "", "\n"); idx:close()
   end
   dict:set("u:" .. key, used() + size, 600)
   return now
+end
+-- The delete-key hash stored with a manifest slot: the index line's fourth column, or the object's metadata. nil: none.
+local function delete_key(slot)
+  if s3.enabled then local r = s3.request("HEAD", key .. "." .. slot); if r.status ~= 200 then return nil end return s3.header(r, "x-amz-meta-delete-key") end
+  local f = io.open(path .. ".index"); if not f then return nil end
+  local found
+  for line in f:lines() do local s, h = line:match("^%d+ (%S+) %d+ (%x+)$"); if s == slot then found = h end end
+  f:close(); return found
+end
+-- Remove a manifest slot and its chunks. true on success.
+local function remove(slot)
+  local mine = function(s) return s == slot or s:sub(1, #slot + 1) == slot .. "." end
+  if s3.enabled then
+    local objects = s3.list(key .. "." .. slot); if not objects then return nil end
+    for _, o in ipairs(objects) do local s = o.key:sub(#key + 2); if mine(s) then local r = s3.request("DELETE", o.key); if r.status ~= 204 and r.status ~= 200 then return nil end end end
+    return true
+  end
+  local f = io.open(path .. ".index"); if not f then return nil end
+  local keep = {}
+  for line in f:lines() do local s = line:match("^%d+ (%S+) "); if s and mine(s) then os.remove(path .. "." .. s) else keep[#keep + 1] = line end end
+  f:close()
+  local out = io.open(path .. ".index.new", "w"); if not out then return nil end
+  out:write(table.concat(keep, "\n"), #keep > 0 and "\n" or ""); out:close()
+  return os.rename(path .. ".index.new", path .. ".index")
 end
 -- The index as text: the file on disk, the listing from the bucket.
 local function index()
@@ -127,15 +153,29 @@ if ngx.var.slot then
     local body = ngx.req.get_body_file()
     if not body then return ngx.exit(400) end   -- client_body_in_file_only guarantees a file
     local f = io.open(body, "rb"); local size = f:seek("end"); f:close()
+    local dkey = ngx.req.get_headers()["x-delete-key"]   -- a manifest may name who can remove it: the sha256 of a token only editors can derive
+    if type(dkey) ~= "string" or #dkey ~= 64 or not dkey:match("^%x+$") or slot:find(".", 1, true) then dkey = nil end
     local status = refuse(slot, size)
     if status then os.remove(body) return ngx.exit(status) end
     ngx.req.clear_header("Content-Length")   -- the bucket put carries its own; the parent's must not shadow it
-    local placed, why = place(slot, body)
+    local placed, why = place(slot, body, dkey)
     if not placed then os.remove(body); dict:delete(lock .. slot); return ngx.exit(why or 500) end
-    local now = commit(slot, size)
+    local now = commit(slot, size, dkey)
     if not now then return ngx.exit(500) end
     for _, p in pairs(S.rooms[key] or {}) do push(p, "text", "S " .. slot .. " " .. now .. " " .. size) end   -- peers on the socket learn of it
     return ngx.exit(201)
+  elseif method == "DELETE" then   -- a manifest and its chunks, by whoever holds the token whose hash came with the manifest
+    if slot == "index" or slot:find(".", 1, true) then return ngx.exit(405) end
+    if not allowed() then return ngx.exit(429) end
+    local token = ngx.req.get_headers()["x-delete-key"]
+    if type(token) ~= "string" or #token ~= 64 or not token:match("^%x+$") then return ngx.exit(403) end
+    local stored = delete_key(slot)
+    if not stored then return ngx.exit(404) end
+    if stored:lower() ~= s3.sha256hex(token) then return ngx.exit(403) end
+    if not remove(slot) then return ngx.exit(502) end
+    dict:delete("u:" .. key); dict:delete(lock .. slot)
+    for _, p in pairs(S.rooms[key] or {}) do push(p, "text", "D " .. slot) end
+    return ngx.exit(204)
   end
   return ngx.exit(405)
 end

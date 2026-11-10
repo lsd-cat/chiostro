@@ -2,7 +2,7 @@
 // sealed manifest names them. Uploads resume: chunks already in the index are skipped. A file
 // is referenced from any app as "<id>" (the manifest slot); the pad uses it for inline images.
 import {Store, randomSlot} from './store.js';
-import type {Bytes} from './crypto.js';
+import {sha256hex, type Bytes} from './crypto.js';
 
 export const CHUNK = 4 * 1024 * 1024;   // raw bytes per chunk; sealed it stays under the server's 8 MB per request
 export type Manifest = {name: string; size: number; type: string; chunks: number; by?: string};
@@ -14,10 +14,11 @@ export class Files {
   onChange?: () => void;   // a new file is complete somewhere in the room
   sign?: (payload: string) => Promise<string>;                  // manifests carry a signature over their JSON ...
   verify?: (payload: string, sig: string) => Promise<boolean>;  // ... and unsigned or badly signed ones are not files
+  deleteKey?: (id: string) => Promise<string>;   // editors only: the removal token for a file, derived from the editor secret; its hash travels with the manifest
   private manifests = new Map<string, Manifest | null>();   // by slot: a manifest never changes, so it is read once
   constructor(private store: Store) {
     const prev = store.onChange;
-    store.onChange = e => { prev?.(e); if (!e.slot.includes('.')) this.onChange?.(); };   // manifests have no chunk suffix
+    store.onChange = e => { prev?.(e); if (!e.slot.includes('.')) { if (e.size < 0) this.manifests.delete(e.slot); this.onChange?.(); } };   // manifests have no chunk suffix
   }
 
   /** Complete files, oldest first. */
@@ -50,9 +51,18 @@ export class Files {
       onProgress?.(Math.min(file.size, (i + 1) * CHUNK), file.size);
     }
     const m: Manifest = {name: file.name ?? 'file', size: file.size, type: file.type, chunks, ...(by && {by})};
-    const status = await this.store.put(id, this.sign ? {...m, sig: await this.sign(JSON.stringify(m))} : m);
+    const dkey = this.deleteKey ? {'X-Delete-Key': await sha256hex(await this.deleteKey(id))} : undefined;
+    const status = await this.store.put(id, this.sign ? {...m, sig: await this.sign(JSON.stringify(m))} : m, dkey);
     if (status !== 201) throw new Error(`manifest ${status}`);
     return id;
+  }
+
+  /** Remove a file for everyone: its manifest and chunks leave the server. The status: 204 gone, 403 not allowed, 404 no such removable file. */
+  async remove(id: string): Promise<number> {
+    if (!this.deleteKey) return 403;
+    const st = await this.store.remove(id, await this.deleteKey(id));
+    if (st === 204) { this.manifests.delete(id); this.onChange?.(); }
+    return st;
   }
 
   /** Download and decrypt into one Blob; null if the manifest or a chunk is missing or not ours. */

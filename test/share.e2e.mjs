@@ -42,6 +42,12 @@ if (await a.eval(`document.querySelectorAll('#files li').length`) !== 2) fail('p
 writeFileSync(join(profile, 'clip.webm'), Buffer.alloc(5000, 7));
 await p.setFiles('#attachfile', [join(profile, 'clip.webm')]);
 console.log('pad video', await p.until(`(v => v && v.src.startsWith('blob:') && v.controls && 'player')(document.querySelector('#preview video'))`, 30000));
+// an editor removes the clip: a second editor's sidebar and text lose it live, the files page of the meeting is untouched
+const p2 = await Tab.open(ROOT + 'pad/' + url.slice(url.indexOf('#'))); await p2.until(`!document.getElementById('editor').readOnly && 'yes'`);
+await p2.eval(`document.getElementById('filesb').click(); 1`); await p2.until(`document.querySelectorAll('#padfilelist li').length === 2 && 'yes'`, 30000);
+await p.eval(`window.confirm = () => true; document.getElementById('filesb').click(); [...document.querySelectorAll('#padfilelist li')].find(li => li.textContent.includes('clip.webm')).querySelector('button.link').click(); 1`);
+console.log('removed', await p2.until(`document.querySelectorAll('#padfilelist li').length === 1 && !document.getElementById('editor').value.includes('clip.webm') && !document.querySelector('#preview video') && 'the other editor lost the clip, its reference and its player'`, 30000));
+if (await p.eval(`document.getElementById('editor').value.includes('clip.webm')`)) fail('the remover\'s own text should drop the reference');
 await a.setFiles('#file', [join(profile, 'clip.webm')]);
 await a.until(`document.querySelectorAll('#files li').length === 3 && 'yes'`);
 await a.eval(`[...document.querySelectorAll('#files li')].find(li => li.textContent.includes('clip.webm')).querySelectorAll('button')[1].click(); 1`);

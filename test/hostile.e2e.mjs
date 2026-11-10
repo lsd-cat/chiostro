@@ -82,6 +82,7 @@ const junk = [];
 for (let i = 0; i < 5; i++) junk.push(await put('0000' + 'f'.repeat(20) + String(i).padStart(8, '0'), randomBytes(200)));
 const head = await put('2'.repeat(32), randomBytes(64));
 console.log('vandal puts', junk.join(','), 'forged head', head);
+if ((await fetch(`${ROOT}blob/pad/${roomV}/${'0000' + 'f'.repeat(20) + '00000000'}`, {method: 'DELETE', headers: {'X-Delete-Key': 'ab'.repeat(32)}})).status !== 404) fail('a blob stored without a removal key cannot be deleted by anyone');
 if (head !== 409) fail("the editors' public key slot must already be taken: " + head);
 await a.eval(set('# Real text\n\nAfter the vandal.'));
 await a.until(`document.getElementById('hstatus').textContent.endsWith('Saved') && 'yes'`, 30000);

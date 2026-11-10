@@ -44,11 +44,21 @@ npm test                                    # unit tests, relay protocol in both
 npm run e2e                                 # every tool in headless Chrome
 ```
 
+`config.json` in the repository root overrides `config.example.json`. PDF export needs the TeX
+bundle from the [tstex](https://github.com/lsd-cat/tstex) repository:
+
+```sh
+git clone --depth 1 https://github.com/lsd-cat/tstex deploy/.cache/tstex
+ln -s ../deploy/.cache/tstex/bundles/minimal openresty/texmf
+```
+
 ## Deploy
 
-`deploy/roles/chiostro` is an Ansible role for a Debian host with nginx and
-`libnginx-mod-http-lua`. Set `chiostro_domain`, `chiostro_config` and, for a bucket,
-`chiostro_store: s3` with `chiostro_s3`. Translations live in `web/src/core/lang/`, one file per
-language.
+`deploy/roles/chiostro` is an Ansible role for a Debian host. It installs nginx with its Lua
+module, acme.sh and coturn in STUN-only mode, fetches the TeX bundle, and renders the vhost. Set
+`chiostro_domain`, `chiostro_config` and, for a bucket, `chiostro_store: s3` with `chiostro_s3`;
+the full TeX bundle can be served from the bucket too (`chiostro_texmf_object_prefix`).
+`deploy/site.yml` is the playbook for chiost.ro, with its secrets in a gitignored
+`deploy/secrets.yml`. Translations live in `web/src/core/lang/`, one file per language.
 
 The planner's grid logic is ported from crab.fit (GPL-3.0).

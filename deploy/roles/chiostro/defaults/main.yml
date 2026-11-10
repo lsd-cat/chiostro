@@ -17,9 +17,13 @@ chiostro_config:
 # The upload rate limit keys on the client address: nginx must face clients directly. Behind a load
 # balancer or CDN every client would share one limit; fold X-Forwarded-For into relay.lua first.
 chiostro_connect_src: ""               # extra CSP connect-src origins: another relay ("wss://relay.chiost.ro") and the Fediverse instances pads may snapshot ("https://mastodon.example https://gancio.example")
-chiostro_texmf_src: ""                 # a local copy of tstex's bundles/minimal (20 MB) to serve at /texmf/ for PDF export; empty: the pad falls back to the print dialog
+chiostro_texmf_src: ""                 # the TeX bundle to serve at /texmf/ for PDF export: a local copy of tstex's bundles/minimal, or empty to fetch it from the tstex repository (chiostro_tstex_repo) on the controller
+chiostro_tstex_repo: https://github.com/lsd-cat/tstex   # where the bundle comes from when chiostro_texmf_src is empty; a shallow clone under .cache/ next to the playbook
+chiostro_texmf: true                   # false: no PDF export, the pad prints through the browser instead
+chiostro_texmf_object_prefix: ""       # bucket mode: serve /texmf/ from objects under this prefix (e.g. texmf/full-2026/) instead of copying a bundle to the host; the full bundle is 2.4 GB
 chiostro_frame_src: "https:"           # CSP frame-src for the embed extension; restrict to origins, or "" to disable
 chiostro_force_single_worker: false    # set worker_processes 1 in nginx.conf (correct on a 1-vCPU host)
+chiostro_stun: true                    # run coturn in STUN-only mode on this host (udp/tcp 3478), so peer-to-peer calls do not ask a third party for their address
 
 # The store: sealed blobs named <app>/<room>.<slot>, on this disk or in an S3-compatible bucket.
 chiostro_store: disk              # disk | s3
@@ -40,7 +44,8 @@ chiostro_logs: "/var/www/{{ chiostro_domain }}/logs"
 chiostro_lua_lib_dir: /usr/local/share/lua/5.1   # on LuaJIT's default package.path; vendored lua-resty-websocket goes here
 
 # TLS: self-signed bootstrap so nginx 443 loads, then acme.sh issues via HTTP-01 from chiostro_acme_webroot.
-chiostro_acme_sh: /usr/bin/acme.sh
+chiostro_acme_sh: /root/.acme.sh/acme.sh   # installed by the role from the acme.sh repository when missing
+chiostro_acme_email: ""                 # Let's Encrypt account contact for expiry notices (optional)
 chiostro_acme_webroot: "{{ chiostro_web_dir }}"
 chiostro_ssl_cert: "/etc/ssl/certs/{{ chiostro_domain }}.pem"
 chiostro_ssl_key: "/etc/ssl/private/{{ chiostro_domain }}.key"

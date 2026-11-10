@@ -7,3 +7,5 @@ openresty/*_temp
 openresty/data
 config.json
 openresty/texmf
+deploy/secrets.yml
+deploy/.cache

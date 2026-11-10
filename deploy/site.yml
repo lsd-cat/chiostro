@@ -1,0 +1,21 @@
+# Deploy Chiostro to chiost.ro: ansible-playbook deploy/site.yml
+# The host needs Debian with nginx, libnginx-mod-http-lua and acme.sh; the role does the rest.
+- hosts: chiost.ro
+  become: true
+  vars_files: [secrets.yml]
+  vars:
+    chiostro_domain: chiost.ro
+    chiostro_src_dir: "{{ playbook_dir }}/.."
+    chiostro_store: s3
+    chiostro_texmf_object_prefix: texmf/full-tl2026/   # the full TeX bundle, uploaded to the bucket with rclone (see docs/design.md)
+    chiostro_force_single_worker: true
+    chiostro_config:
+      name: Chiostro
+      tagline: ""
+      logo: /themes/chiostro.svg
+      apps: [meet, when, pad, share, form]
+      media: relay
+      iceServers: [{urls: "stun:chiost.ro:3478"}]   # coturn on this host, STUN only
+      extensions: {agenda: true}
+  roles:
+    - chiostro

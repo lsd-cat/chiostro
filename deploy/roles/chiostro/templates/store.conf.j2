@@ -20,6 +20,11 @@ location ^~ /_s3/ {
 	add_header Cache-Control "private, max-age=31536000, immutable";
 }
 location = /_expire { allow 127.0.0.1; allow ::1; deny all; content_by_lua_file {{ chiostro_app_dir }}/expire.lua; }
+{% if chiostro_texmf_object_prefix %}
+# the TeX bundle lives in the bucket too: /texmf/<path> streams {{ chiostro_texmf_object_prefix }}<path>
+set $texmf_prefix "{{ chiostro_texmf_object_prefix }}";
+location ^~ /texmf/ { content_by_lua_file {{ chiostro_app_dir }}/texmf.lua; }
+{% endif %}
 {% else %}
 set $s3_host ""; set $s3_bucket ""; set $s3_region ""; set $s3_key ""; set $s3_secret "";
 {% endif %}

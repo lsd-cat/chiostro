@@ -10,6 +10,22 @@
   check_mode: false
   changed_when: false
 
+# --- Packages: nginx with its Lua module (Debian's build of lua-nginx-module plus lua-resty-core), git for the bundle, acme.sh from its installer ---
+- name: nginx, its Lua module and tools
+  ansible.builtin.apt:
+    name: [nginx, libnginx-mod-http-lua, lua-resty-core, lua-resty-lrucache, curl, git, openssl]
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: acme.sh (from its repository; the install adds the daily renewal cron)
+  ansible.builtin.shell: |
+    set -e
+    rm -rf /tmp/acme.sh && git clone -q --depth 1 https://github.com/acmesh-official/acme.sh /tmp/acme.sh
+    cd /tmp/acme.sh && ./acme.sh --install --home /root/.acme.sh --no-profile {{ ('--accountemail ' ~ chiostro_acme_email) if chiostro_acme_email else '' }}
+  args:
+    creates: /root/.acme.sh/acme.sh
+
 # --- Rooms are per worker: the relay needs exactly one nginx worker ---
 - name: Read nginx worker_processes
   ansible.builtin.shell: grep -E '^\s*worker_processes' /etc/nginx/nginx.conf
@@ -54,7 +70,7 @@
     owner: root
     group: root
     mode: "0644"
-  loop: [relay.lua, expire.lua]
+  loop: [relay.lua, expire.lua, texmf.lua]
   notify: reload nginx   # lua_code_cache: changed Lua needs an nginx reload
 
 - name: Deploy the bucket store module where require finds it
@@ -162,14 +178,25 @@
   loop_control:
     label: "{{ item.key }}: {{ item.value }} days"
 
+- name: The TeX bundle, from the tstex repository when no local copy is named
+  ansible.builtin.git:
+    repo: "{{ chiostro_tstex_repo }}"
+    dest: "{{ playbook_dir }}/.cache/tstex"
+    depth: 1
+    version: main
+  delegate_to: localhost
+  become: false
+  run_once: true
+  when: chiostro_texmf | bool and chiostro_texmf_src | length == 0 and not chiostro_texmf_object_prefix
+
 - name: TeX Live bundle for PDF export (tstex reads it from /texmf/)
   ansible.builtin.copy:
-    src: "{{ chiostro_texmf_src }}/"
+    src: "{{ (chiostro_texmf_src if chiostro_texmf_src | length > 0 else playbook_dir ~ '/.cache/tstex/bundles/minimal') }}/"
     dest: "{{ chiostro_web_dir }}/texmf/"
     owner: root
     group: root
     mode: "u=rwX,go=rX"
-  when: chiostro_texmf_src | length > 0
+  when: chiostro_texmf | bool and not chiostro_texmf_object_prefix
 
 - name: Deployment config (data, not part of the signed bundle)
   ansible.builtin.copy:
@@ -178,6 +205,38 @@
     owner: root
     group: root
     mode: "0644"
+
+# --- STUN: coturn with no relaying, no credentials; a peer-to-peer call learns its public address here, not at Google ---
+- name: coturn
+  ansible.builtin.apt:
+    name: coturn
+    state: present
+  when: chiostro_stun | bool
+
+- name: coturn in STUN-only mode
+  ansible.builtin.copy:
+    dest: /etc/turnserver.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # chiostro: STUN only. No TURN relaying, no credentials, no CLI, no TLS: an address lookup service.
+      listening-port=3478
+      stun-only
+      no-cli
+      no-tls
+      no-dtls
+      no-multicast-peers
+      syslog
+  when: chiostro_stun | bool
+  notify: restart coturn
+
+- name: coturn enabled
+  ansible.builtin.systemd:
+    name: coturn
+    enabled: true
+    state: started
+  when: chiostro_stun | bool
 
 # --- TLS: self-signed bootstrap so nginx 443 can load, then issue via Let's Encrypt ---
 - name: Check for an existing cert
@@ -226,10 +285,10 @@
 - name: Issue real TLS cert (Let's Encrypt)
   ansible.builtin.command:
     cmd: >-
-      {{ chiostro_acme_sh }} --issue --server letsencrypt
+      {{ chiostro_acme_sh }} --issue --server letsencrypt --keylength ec-256
       -d {{ chiostro_domain }} -w {{ chiostro_acme_webroot }}
-      --fullchain-file {{ chiostro_ssl_cert }} --key-file {{ chiostro_ssl_key }}
-    creates: "/root/.acme.sh/{{ chiostro_domain }}/{{ chiostro_domain }}.cer"   # this acme.sh issues RSA (no _ecc dir); acme.sh itself skips when not due
+      --fullchain-file {{ chiostro_ssl_cert }} --key-file {{ chiostro_ssl_key }} --reloadcmd 'systemctl reload nginx'
+    creates: "/root/.acme.sh/{{ chiostro_domain }}_ecc/{{ chiostro_domain }}.cer"   # issued once; acme.sh's own cron renews and reloads nginx
   register: _acme
   changed_when: _acme.rc == 0
   failed_when: false

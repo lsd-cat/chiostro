@@ -7,17 +7,36 @@ set $s3_key "{{ chiostro_s3.key }}"; set $s3_secret "{{ chiostro_s3.secret }}";
 # s3.lua's signed subrequests go through here: path-style, the bucket in the path, TLS verified.
 location ^~ /_s3/ {
 	internal;
-	proxy_pass https://{{ chiostro_s3.host }}/{{ chiostro_s3.bucket }}/;
+	client_max_body_size 0;   # the signed put carries a whole chunk; the 1 MB default would refuse it with an empty 413
+	proxy_pass https://chiostro_s3/{{ chiostro_s3.bucket }}/;
 	proxy_http_version 1.1;
 	proxy_set_header Host {{ chiostro_s3.host }};
 	proxy_set_header Connection "";
 	proxy_ssl_server_name on;
+	proxy_ssl_name {{ chiostro_s3.host }};
+	proxy_ssl_session_reuse on;
 	proxy_ssl_verify on;
 	proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
 	proxy_hide_header x-amz-request-id; proxy_hide_header x-amz-id-2;
 	proxy_hide_header Content-Type; proxy_hide_header Content-Disposition;   # a blob is bytes whatever the uploader called it: never a page on this origin
 	add_header Content-Type application/octet-stream always; add_header Content-Disposition attachment always; add_header X-Content-Type-Options nosniff always;
 	add_header Cache-Control "private, max-age=31536000, immutable";
+}
+# the TeX bundle's objects, the same way but cached on disk: the bucket is asked once per file
+location ^~ /_s3texmf/ {
+	internal;
+	proxy_pass https://chiostro_s3/{{ chiostro_s3.bucket }}/;
+	proxy_http_version 1.1;
+	proxy_set_header Host {{ chiostro_s3.host }};
+	proxy_set_header Connection "";
+	proxy_ssl_server_name on;
+	proxy_ssl_name {{ chiostro_s3.host }};
+	proxy_ssl_verify on;
+	proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+	proxy_cache chiostro_texmf; proxy_cache_key $uri; proxy_cache_valid 200 365d; proxy_ignore_headers Cache-Control Expires Set-Cookie; proxy_cache_lock on;
+	proxy_hide_header x-amz-request-id; proxy_hide_header x-amz-id-2; proxy_hide_header Content-Type; proxy_hide_header Content-Disposition;
+	add_header Content-Type application/octet-stream always; add_header X-Content-Type-Options nosniff always; add_header X-Cache $upstream_cache_status always;
+	add_header Cache-Control "public, max-age=31536000, immutable";
 }
 location = /_expire { allow 127.0.0.1; allow ::1; deny all; content_by_lua_file {{ chiostro_app_dir }}/expire.lua; }
 {% if chiostro_texmf_object_prefix %}

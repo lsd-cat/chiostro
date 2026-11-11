@@ -111,10 +111,8 @@
   loop: "{{ ['tmp'] + (chiostro_expiry_days.keys() | list) }}"
 
 - name: Store settings that live in the http context
-  ansible.builtin.copy:
-    content: |
-      # chiostro: rate windows and per-room quota cache for relay.lua, all entries with expiry
-      lua_shared_dict chiostro 2m;
+  ansible.builtin.template:
+    src: http.conf.j2
     dest: /etc/nginx/conf.d/chiostro-store.conf
     owner: root
     group: root

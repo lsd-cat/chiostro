@@ -1,0 +1,7 @@
+# chiostro: rate windows and per-room quota cache for relay.lua, all entries with expiry
+lua_shared_dict chiostro 2m;
+{% if chiostro_store == 's3' %}
+# the bucket: a pool of idle TLS connections (a handshake per request was the cost of every blob), and a disk cache for the TeX bundle
+upstream chiostro_s3 { server {{ chiostro_s3.host }}:443; keepalive 32; }
+proxy_cache_path /var/cache/nginx/chiostro-texmf levels=1:2 keys_zone=chiostro_texmf:16m max_size={{ chiostro_texmf_cache }} inactive=180d use_temp_path=off;
+{% endif %}

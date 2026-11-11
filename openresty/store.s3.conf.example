@@ -8,6 +8,7 @@ set $s3_secret "SECRET_KEY";
 # The signed subrequests from s3.lua go through here: path-style, the bucket in the path.
 location ^~ /_s3/ {
   internal;
+  client_max_body_size 0;   # the signed put carries a whole chunk; the 1 MB default would refuse it with an empty 413
   proxy_pass https://s3.eu-south-mil.io.cloud.ovh.net/chiostro-store/;
   proxy_http_version 1.1;
   proxy_set_header Host s3.eu-south-mil.io.cloud.ovh.net;

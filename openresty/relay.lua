@@ -60,7 +60,7 @@ local function place(slot, body, dkey)
   local r = s3.request("PUT", key .. "." .. slot, nil, bytes, dkey and {["x-amz-meta-delete-key"] = dkey} or nil)
   ngx.req.clear_header("If-None-Match")
   if r.status == 412 then return nil, 409 end
-  if r.status ~= 200 then ngx.log(ngx.ERR, "bucket put ", slot, ": ", r.status) return nil, 502 end
+  if r.status ~= 200 then ngx.log(ngx.ERR, "bucket put ", slot, ": ", r.status, " ", (r.body or ""):sub(1, 300):gsub("%s+", " ")) return nil, 502 end
   return true
 end
 local function commit(slot, size, dkey)   -- after the blob is in place: index line (disk, with the delete-key hash if any), quota cache

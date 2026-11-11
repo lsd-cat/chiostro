@@ -57,10 +57,10 @@ function M.request(method, key, args, body, extra)
 end
 --- A response header, whatever its case.
 function M.header(r, name) for k, v in pairs(r.header or {}) do if k:lower() == name then return type(v) == "table" and v[1] or v end end end
---- Hand the client an object as the response, streamed by nginx.
-function M.stream(key)
+--- Hand the client an object as the response, streamed by nginx through `via` (/_s3/, or /_s3texmf/ which caches on disk).
+function M.stream(key, via)
   sign("GET", key, "")
-  return ngx.exec("/_s3/" .. key)
+  return ngx.exec((via or "/_s3/") .. key)
 end
 
 -- ISO 8601 (as the listing gives it) to epoch milliseconds, no time zone involved

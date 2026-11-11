@@ -17,10 +17,13 @@ let nginx;
 test.before(async () => {
   await s3.listen(S3_PORT);
   mkdirSync(DIR + '/data/tmp', {recursive: true}); mkdirSync(DIR + '/logs');
-  for (const f of ['relay.lua', 's3.lua', 'expire.lua', 'vendor']) symlinkSync(`${ROOT}/openresty/${f}`, `${DIR}/${f}`);
-  writeFileSync(DIR + '/nginx.conf', readFileSync(ROOT + '/openresty/nginx.conf', 'utf8').replace('listen 127.0.0.1:8080', 'listen 127.0.0.1:' + PORT));
+  for (const f of ['relay.lua', 's3.lua', 'expire.lua', 'texmf.lua', 'vendor']) symlinkSync(`${ROOT}/openresty/${f}`, `${DIR}/${f}`);
+  writeFileSync(DIR + '/nginx.conf', readFileSync(ROOT + '/openresty/nginx.conf', 'utf8').replace('listen 127.0.0.1:8080', 'listen 127.0.0.1:' + PORT).replace(/    location \^~ \/texmf\/ \{[^\n]*\n/, '').replace('  lua_shared_dict chiostro 2m;', `  lua_shared_dict chiostro 2m;\n  upstream chiostro_s3 { server 127.0.0.1:${S3_PORT}; keepalive 8; }\n  proxy_cache_path ${DIR}/cache levels=1:2 keys_zone=chiostro_texmf:4m max_size=50m use_temp_path=off;`));
   writeFileSync(DIR + '/store.conf', `set $data ""; set $s3_host "127.0.0.1:${S3_PORT}"; set $s3_bucket "test"; set $s3_region "eu-test"; set $s3_key "AKIATEST"; set $s3_secret "testsecret";
-location ^~ /_s3/ { internal; proxy_pass http://127.0.0.1:${S3_PORT}/test/; proxy_http_version 1.1; proxy_set_header Host 127.0.0.1:${S3_PORT}; proxy_set_header Connection ""; proxy_hide_header Content-Type; proxy_hide_header Content-Disposition; add_header Content-Type application/octet-stream always; add_header Content-Disposition attachment always; add_header X-Content-Type-Options nosniff always; add_header Cache-Control "private, max-age=31536000, immutable"; }\n`);
+location ^~ /_s3texmf/ { internal; proxy_pass http://chiostro_s3/test/; proxy_http_version 1.1; proxy_set_header Host 127.0.0.1:${S3_PORT}; proxy_set_header Connection ""; proxy_cache chiostro_texmf; proxy_cache_key $uri; proxy_cache_valid 200 365d; add_header X-Cache $upstream_cache_status always; }
+set $texmf_prefix "texmf/";
+location ^~ /texmf/ { content_by_lua_file texmf.lua; }
+location ^~ /_s3/ { internal; client_max_body_size 0; proxy_pass http://chiostro_s3/test/; proxy_http_version 1.1; proxy_set_header Host 127.0.0.1:${S3_PORT}; proxy_set_header Connection ""; proxy_hide_header Content-Type; proxy_hide_header Content-Disposition; add_header Content-Type application/octet-stream always; add_header Content-Disposition attachment always; add_header X-Content-Type-Options nosniff always; add_header Cache-Control "private, max-age=31536000, immutable"; }\n`);
   nginx = spawn('openresty', ['-p', DIR, '-c', 'nginx.conf'], {stdio: ['ignore', 'ignore', 'pipe']}); nginx.stderr.on('data', d => process.stderr.write('[nginx] ' + d));
   for (let i = 0; i < 40; i++) { try { await fetch(BASE); break; } catch { await sleep(100); } }
 });
@@ -57,4 +60,12 @@ test('expire.lua: an old room goes, a fresh one stays, old pad checkpoints are p
   assert.match(out, /share: 1 objects of expired rooms deleted/); assert.match(out, /pad: 0 objects of expired rooms deleted, 3 old checkpoints pruned/);
   assert.equal((await fetch(`${BASE}blob/share/${old}/${'c'.repeat(32)}`)).status, 404); assert.equal((await fetch(`${BASE}blob/share/${fresh}/${'d'.repeat(32)}`)).status, 200);
   assert.equal((await (await fetch(`${BASE}blob/pad/${pad}/index`)).text()).split('\n').filter(Boolean).length, 2, 'the newest two checkpoints remain');
+});
+
+test('the TeX bundle from the bucket: streamed once, then served from the host cache; no path tricks', async () => {
+  s3.objects.set('texmf/fmt/latex.fmt', {body: Buffer.from('FMT'), at: new Date(), type: 'binary/octet-stream', meta: {}});
+  const a = await fetch(`${BASE}texmf/fmt/latex.fmt`); assert.equal(a.status, 200); assert.equal(await a.text(), 'FMT'); assert.equal(a.headers.get('x-cache'), 'MISS');
+  const b = await fetch(`${BASE}texmf/fmt/latex.fmt`); assert.equal(b.headers.get('x-cache'), 'HIT', 'the second request never reaches the bucket');
+  assert.equal((await fetch(`${BASE}texmf/nope.tex`)).status, 404);
+  assert.equal((await fetch(`${BASE}texmf/..%2Fshare%2Fx`)).status, 404, 'no escaping the prefix');
 });

@@ -20,6 +20,7 @@ chiostro_connect_src: ""               # extra CSP connect-src origins: another 
 chiostro_texmf_src: ""                 # the TeX bundle to serve at /texmf/ for PDF export: a local copy of tstex's bundles/minimal, or empty to fetch it from the tstex repository (chiostro_tstex_repo) on the controller
 chiostro_tstex_repo: https://github.com/lsd-cat/tstex   # where the bundle comes from when chiostro_texmf_src is empty; a shallow clone under .cache/ next to the playbook
 chiostro_texmf: true                   # false: no PDF export, the pad prints through the browser instead
+chiostro_texmf_cache: 2g                # bucket mode: disk cache for the TeX files on this host (nginx proxy_cache), immutable so cached for good within this cap
 chiostro_texmf_object_prefix: ""       # bucket mode: serve /texmf/ from objects under this prefix (e.g. texmf/full-2026/) instead of copying a bundle to the host; the full bundle is 2.4 GB
 chiostro_frame_src: "https:"           # CSP frame-src for the embed extension; restrict to origins, or "" to disable
 chiostro_force_single_worker: false    # set worker_processes 1 in nginx.conf (correct on a 1-vCPU host)

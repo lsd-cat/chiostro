@@ -110,6 +110,15 @@
     mode: "0750"
   loop: "{{ ['tmp'] + (chiostro_expiry_days.keys() | list) }}"
 
+- name: Cache directory for the TeX bundle (bucket mode)
+  ansible.builtin.file:
+    path: /var/cache/nginx/chiostro-texmf
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0750"
+  when: chiostro_store == 's3'
+
 - name: Store settings that live in the http context
   ansible.builtin.template:
     src: http.conf.j2

@@ -8,6 +8,7 @@ import {randomBytes} from 'node:crypto';
 import {launch, sleep, ROOT, toolKey, viewKey} from './tab.mjs';
 import {png, pdfInfo} from './fixtures.mjs';
 const {Tab, profile, fail} = await launch(9330, ['--window-size=1280,900']);
+try { writeFileSync('openresty/logs/texmf.log', ''); } catch {}   // the dev server's log of TeX files served, counted below from zero
 process.on('uncaughtException', e => { console.error(e.message.slice(0, 300)); for (const t of Tab.all) console.error('tab:', t.violations); process.exit(1); });
 const ready = `!document.getElementById('editor').readOnly && location.href`;
 const text = `document.getElementById('editor').value`;
@@ -32,6 +33,19 @@ console.log('converted', await a.until(`${text}.startsWith('\\\\documentclass') 
 if (!await a.eval(`document.getElementById('padmain').dataset.mode === 'tex' && document.getElementById('present').hidden`)) fail('a LaTeX pad should hide the markdown-only tools');
 console.log('latex highlighting', await a.until(`(m => m.querySelector('.tk-cmd')?.textContent === '\\\\documentclass' && m.querySelector('.tk-env') && 'commands and environments coloured')(document.getElementById('marks'))`));
 console.log('preview', await a.until(compiled, 120000));
+// the engine keeps every TeX file it fetched, and the minimal set it prefetched, in persistent storage: after a reload the
+// same document compiles with no fetch of a TeX file at all
+const texmf = () => { try { return readFileSync('openresty/logs/texmf.log', 'utf8').split('\n').filter(l => l.includes('GET /texmf/')).length; } catch { return 0; } };   // the dev server logs every TeX file served
+let n0 = texmf(); for (let i = 0; i < 90; i++) { await sleep(1000); if (texmf() === n0) break; n0 = texmf(); }   // the prefetch of the minimal set runs in the background: wait until the count settles
+console.log('TeX files fetched so far', n0);
+if (n0 < 100) fail('the prefetch should have pulled the minimal set, got ' + n0 + ' requests');
+await sleep(21000); await a.until(`document.getElementById('hstatus').textContent.endsWith('Saved') && 'yes'`, 30000);   // checkpoints are at most one per 20 s: the LaTeX text must be stored before the reload
+await a.eval(`location.reload(); 1`); await a.until(ready); await a.until(`${text}.startsWith('\\\\documentclass') && 'yes'`, 30000);
+const before = texmf();
+await a.eval(`(() => { const e = document.getElementById('editor'); e.value = e.value.replace('A paragraph', 'A changed paragraph'); e.dispatchEvent(new Event('input')); })(); 1`);
+await a.until(compiled, 120000); await sleep(1500);
+console.log('TeX files fetched after a reload and a recompile:', texmf() - before);
+if (texmf() - before > 2) fail('after a reload the engine should compile from its cache, but fetched ' + (texmf() - before) + ' TeX files');
 
 // the files sidebar: the attachment, insert at the caret, download
 await a.eval(`document.getElementById('filesb').click(); 1`);

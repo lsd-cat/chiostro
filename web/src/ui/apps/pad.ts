@@ -140,11 +140,16 @@ if (!viewing) files.deleteKey = async id => hex(await sess.derive(`pad/delete/${
 // A markdown pad is converted on the fly for its export. Attachments reach TeX under their id and their name;
 // \input{pad:<tool link>} pulls another pad in (converted when it is markdown).
 const isTex = (s: string) => /^\s*\\documentclass/.test(s);
-type Tstex = {createTeX(o: {texmf: string; cache: 'persistent'}): {compile(o: {files: Record<string, string | Uint8Array>; main: string; runs: 'auto'; onProgress: (p: {type: string}) => void}): Promise<{ok: boolean; pdf: Uint8Array | null; log: string}>}};
+type Tstex = {createTeX(o: {texmf: string; cache: 'persistent'}): {prefetch(names: string[]): Promise<void>; compile(o: {files: Record<string, string | Uint8Array>; main: string; runs: 'auto'; onProgress: (p: {type: string}) => void}): Promise<{ok: boolean; pdf: Uint8Array | null; log: string}>}};
 const TSTEX = '/vendor/tstex/index.js';
 let tex: ReturnType<Tstex['createTeX']> | null = null;
 async function compileTex(source: string, extra: Record<string, Uint8Array>, note: (s: string) => void): Promise<{ok: boolean; pdf: Uint8Array | null; log: string}> {
-  tex ??= ((await import(TSTEX)) as Tstex).createTeX({texmf: config.texmf, cache: 'persistent'});
+  if (!tex) {
+    tex = ((await import(TSTEX)) as Tstex).createTeX({texmf: config.texmf, cache: 'persistent'});
+    // After the first engine start, pull the whole minimal set (fonts, base classes, the common packages, ~8 MB) into the
+    // engine's persistent cache in parallel, so later documents compile without a fetch per file.
+    fetch('/texmf-prefetch.json').then(r => r.json()).then((names: string[]) => tex!.prefetch(names)).catch(() => {});
+  }
   let fetched = 0;
   return tex.compile({files: {'main.tex': source, ...extra}, main: 'main.tex', runs: 'auto', onProgress: p => { if (p.type === 'fetch') note(t('typesetting', {n: ++fetched})); }});
 }

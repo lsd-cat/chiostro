@@ -134,7 +134,8 @@ export async function joinSigned(name: string, roomApp = app, viewing = params.h
     keys = (await head.get(HEAD_PRIV)) as SignKeys | null;
     if (!keys?.priv || !keys.pub) {
       const fresh = await signKeypair();
-      const st = await head.put(HEAD_PRIV, fresh);
+      let st = await head.put(HEAD_PRIV, fresh);
+      for (let wait = 1; st === 429 && wait <= 4; wait++) { await new Promise(r => setTimeout(r, wait * 1000)); st = await head.put(HEAD_PRIV, fresh); }   // the address is in a rate window (a burst from the same network): wait it out
       if (st === 201) keys = fresh;
       else keys = st === 409 ? (await head.get(HEAD_PRIV)) as SignKeys | null : null;   // someone else created it meanwhile, or the store refused
       if (!keys?.priv) { status(t('createFailed', {status: st})); throw new Error('no editor key'); }

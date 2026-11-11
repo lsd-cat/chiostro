@@ -13,6 +13,7 @@
 #editor { color: transparent; caret-color: var(--fg); background: transparent; border: 0; border-radius: 0; resize: none; outline: none; }
 #editor::selection { background: color-mix(in oklch, var(--accent) 30%, transparent); }
 #marks { color: var(--fg); pointer-events: none; scrollbar-width: none; }
+#marks .ln { display: block; }   /* one block per line, newline included, so a keystroke repaints one line */
 #marks.authors span[data-who] { background: hsl(var(--hue) 70% 50% / .1); box-shadow: inset 3px 0 0 hsl(var(--hue) 70% 50% / .8); border-radius: 2px; }   /* a faint tint and a coloured rule per run */
 #editwrap.plain #editor { color: var(--fg); } #editwrap.plain #marks { display: none; }
 /* other editors: their selection tinted, a caret with their name above it; both take no width, so the layer keeps the textarea's wrapping */

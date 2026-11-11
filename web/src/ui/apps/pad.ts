@@ -68,20 +68,38 @@ const hue = (key: string) => { let h = 0; for (const ch of key) h = (h * 31 + ch
 const cursors = new Map<number, {from: number; to: number}>();
 const peerHue = (id: number) => hue(authorOf.get(id) ?? core.roster.nameOf(id));
 const caretEl = (id: number) => { const c = el('span', undefined, 'caret'); c.dataset['who'] = core.roster.nameOf(id); c.style.setProperty('--hue', String(peerHue(id))); return c; };
+let painted = new Map<string, HTMLElement[]>();   // the layer's lines from the last paint, by what they show: a keystroke rebuilds one line, the rest are reused
 const paintMarks = () => {
-  const frag = document.createDocumentFragment(), cls = classes(shown, isTex(shown) ? 'tex' : 'md'), cm = threads?.cover(shown.length) ?? [];
+  const text = shown + '\n', cls = classes(shown, isTex(shown) ? 'tex' : 'md'), cm = threads?.cover(shown.length) ?? [];   // the extra newline keeps the layer as tall as the textarea
   const sel: (number | undefined)[] = [], carets = new Map<number, number[]>();   // per character: whose selection; per position: whose carets
   for (const [id, r] of cursors) { for (let i = r.from; i < r.to; i++) sel[i] = id; carets.set(r.to, [...(carets.get(r.to) ?? []), id]); }
-  for (let i = 0; i < shown.length;) {
-    for (const id of carets.get(i) ?? []) frag.append(caretEl(id));
-    const who = authors[i] ?? '', c = cls[i]!, k = cm[i], s = sel[i]; let j = i + 1; while (j < shown.length && (authors[j] ?? '') === who && cls[j] === c && cm[j] === k && sel[j] === s && !carets.has(j)) j++;
-    const span = el('span', shown.slice(i, j), [c ? 'tk-' + c : '', k ? 'cm' : '', s !== undefined ? 'rsel' : ''].join(' ').trim() || undefined); if (who) { span.style.setProperty('--hue', String(hue(who))); span.dataset['who'] = who.split('\u001f')[0]!; } if (k) span.dataset['thread'] = k; if (s !== undefined) span.style.setProperty('--sel', String(peerHue(s)));
-    frag.append(span); i = j;
+  const lines: HTMLElement[] = [], next = new Map<string, HTMLElement[]>(), names = new Set<string>();
+  for (let i = 0; i < text.length;) {
+    const end = text.indexOf('\n', i) + 1;   // this line, newline included
+    const runs: [number, number, string, string, string | undefined, number | undefined][] = [];
+    for (let p = i; p < end;) {
+      const who = authors[p] ?? '', c = cls[p] ?? '', k = cm[p], s = sel[p]; let q = p + 1;
+      while (q < end && (authors[q] ?? '') === who && (cls[q] ?? '') === c && cm[q] === k && sel[q] === s && !carets.has(q)) q++;
+      runs.push([p, q, who, c, k, s]); if (who) names.add(who.split('\u001f')[0]!); p = q;
+    }
+    const key = text.slice(i, end) + '\u0000' + runs.map(([p, q, who, c, k, s]) => `${q - p}:${who}:${c}:${k ?? ''}:${s ?? ''}`).join(',') + '\u0000' + runs.map(([p]) => (carets.get(p) ?? []).join('/')).join(',');
+    let line = painted.get(key)?.pop();
+    if (!line) {
+      line = el('div', undefined, 'ln');
+      for (const [p, q, who, c, k, s] of runs) {
+        for (const id of carets.get(p) ?? []) line.append(caretEl(id));
+        const span = el('span', text.slice(p, q), [c ? 'tk-' + c : '', k ? 'cm' : '', s !== undefined ? 'rsel' : ''].join(' ').trim() || undefined);
+        if (who) { span.style.setProperty('--hue', String(hue(who))); span.dataset['who'] = who.split('\u001f')[0]!; } if (k) span.dataset['thread'] = k; if (s !== undefined) span.style.setProperty('--sel', String(peerHue(s)));
+        line.append(span);
+      }
+    }
+    next.set(key, [...(next.get(key) ?? []), line]); lines.push(line); i = end;
   }
-  for (const id of carets.get(shown.length) ?? []) frag.append(caretEl(id));
-  marks.replaceChildren(frag, el('span', '\n'));   // the trailing newline keeps the layer as tall as the textarea
-  const names = [...new Set(authors.filter(Boolean).map(a => a.split('\u001f')[0]!))];
-  marks.ariaLabel = names.length ? t('wroteBy', {names: names.join(', ')}) : null;
+  painted = next;
+  const old = [...marks.children];   // a snapshot: the live collection is walked from the start on every index after a change
+  if (old.length === lines.length) { for (let n = 0; n < lines.length; n++) if (old[n] !== lines[n]) marks.replaceChild(lines[n]!, old[n]!); }   // the usual keystroke: one line swapped
+  else marks.replaceChildren(...lines);
+  marks.ariaLabel = names.size ? t('wroteBy', {names: [...names].join(', ')}) : null;
 };
 editor.onscroll = () => { marks.scrollTop = editor.scrollTop; marks.scrollLeft = editor.scrollLeft; };
 editor.placeholder = t('placeholder');

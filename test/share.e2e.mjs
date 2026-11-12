@@ -14,7 +14,7 @@ writeFileSync(join(profile, 'big.bin'), big);
 writeFileSync(join(profile, 'dot.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR4AWP4z8DwHwyBNIgDAEzeB/3dPz+0AAAAAElFTkSuQmCC', 'base64'));
 
 const a = await Tab.open(ROOT + 'share/');
-const url = await a.until(`document.getElementById('files') && !document.getElementById('loading') && location.href`);
+const url = await a.until(`document.getElementById('files') && !document.getElementById('file').disabled && location.href`);   // uploads are enabled once the room is joined
 console.log('share', url);
 const b = await Tab.open(url); await b.until(`document.getElementById('empty') && !document.getElementById('empty').hidden && 'yes'`);
 await a.setFiles('#file', [join(profile, 'big.bin'), join(profile, 'dot.png')]);

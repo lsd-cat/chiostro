@@ -25,6 +25,7 @@ if (!viewing) {
 async function list() {
   const all = await files.list();
   $('empty').hidden = all.length > 0;
+  if (viewing && !signed.keyed) { status(t('noHeadFiles')); return; }   // nothing can be verified yet, so nothing is listed: say why
   status((viewing ? t('readOnly') + ' · ' : '') + (all.length ? t('nFiles', {n: all.length, size: bytesLabel(all.reduce((s, f) => s + f.size, 0))}) : ''));
   $('files').replaceChildren(...all.map(row));
 }
@@ -49,6 +50,7 @@ function row(f: FileEntry) {
 }
 files.onChange = list;
 const queue = uploadQueue($('uploads'));
+$<HTMLInputElement>('file').disabled = viewing;   // enabled only once the room is joined, so a file picked early is not dropped on the floor
 dropZone($('drop'), $<HTMLInputElement>('file'), picked => { if (viewing) return; for (const f of picked) queue.add(f, p => files.upload(f, nameOf(), p)).then(list, () => {}); });   // picked, dropped or pasted anywhere on the page
 $('drop').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $<HTMLInputElement>('file').click(); } };
 title(t('app_share'));

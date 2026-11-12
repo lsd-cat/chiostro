@@ -18,7 +18,7 @@ const home = await Tab.open(ROOT + '#' + M); await home.until(`document.querySel
 if (await home.eval(`[...document.querySelectorAll('#toolgrid a')].every(a => a.getAttribute('href').endsWith('#${M}'))`) !== true || await home.eval(`document.querySelectorAll('#home button').length`) !== 0) fail('the landing page should link every tool with the key and have no copy button');
 console.log('landing cards carry the key');
 await home.eval(`(() => { const s = document.querySelector('select.lang'); s.value = 'it'; s.dispatchEvent(new Event('change')); })(); 1`);
-await home.until(`document.documentElement.lang === 'it' && document.getElementById('tagline').textContent.startsWith('Strumenti') && 'yes'`);
+await home.until(`document.documentElement.lang === 'it' && document.getElementById('tagline').textContent.startsWith('Suite di collaborazione') && 'yes'`);
 console.log('italian', await home.eval(`document.getElementById('tagline').textContent`));
 const pad = await Tab.open(ROOT + 'pad/#' + M); await pad.until(`!document.getElementById('editor').readOnly && 'yes'`);
 if (await pad.eval(`document.documentElement.lang`) !== 'it' || !await pad.eval(`document.getElementById('colors').textContent.includes('Colori')`)) fail('the language should follow to another tool');
@@ -39,7 +39,7 @@ await pad.eval(click('namebox'));
 await pad.until(`document.getElementById('namepop').matches(':popover-open') && document.activeElement === document.getElementById('name') && 'yes'`);
 await pad.eval(`(() => { const i = document.getElementById('name'); i.value = 'Zoe'; i.dispatchEvent(new Event('change')); })(); 1`);
 await pad.until(`!document.getElementById('editor').readOnly && document.getElementById('namechip').textContent === 'Zoe' && 'yes'`);   // the pad reloads to present under the new name
-const share = await Tab.open(ROOT + 'share/#' + M); await share.until(`document.getElementById('files') && 'yes'`);
+const share = await Tab.open(ROOT + 'share/#' + M); await share.until(`document.getElementById('files') && !document.getElementById('file').disabled && 'yes'`);
 if (await share.eval(`localStorage.getItem('name')`) !== 'Zoe') fail('the name should follow to another tool');   // the files page has no chip; it signs uploads with the name
 console.log('name chip set and shared');
 

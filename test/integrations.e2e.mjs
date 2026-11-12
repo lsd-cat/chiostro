@@ -100,7 +100,7 @@ if (await a.eval(`!!document.getElementById('embedb')`)) {
 
 // 8. files: the same key opens this meeting's files page; a file added there is listed live
 const share = await Tab.open(ROOT + 'share/#' + K);
-await share.until(`document.getElementById('files') && !document.getElementById('drop').hidden && 'yes'`);
+await share.until(`document.getElementById('files') && !document.getElementById('file').disabled && 'yes'`);
 await sameKey(share, 'files');
 await share.setFiles('#file', [join(profile, 'dot.png')]);
 console.log('files', await share.until(`document.querySelectorAll('#files li').length === 1 && document.getElementById('files').textContent`, 30000));

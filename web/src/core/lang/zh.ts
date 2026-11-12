@@ -243,6 +243,7 @@ const dict: Record<string, string> = {
   viewCopied: "✅ 已复制只读链接",   // "✅ View link copied" — header, shared
   readOnly: "只读视图",   // "Read-only view" — pad; files page
   noHead: "此文档还没有编辑密钥；请先打开编辑链接。",   // "This pad has no editor key yet; open the edit link first." — pad
+  noHeadFiles: "此文件页还没有编辑密钥；请先打开编辑链接。",   // "This files page has no editor key yet; open the edit link first." — files page
   shareSubtitle: "在浏览器中加密。持有链接的人都可以添加和下载。",   // "Encrypted in your browser. Anyone with the link can add and download." — files page markup; files page; files page markup: <small>
   shareSubtitleView: "只读视图。文件在下载时在浏览器中解密。",   // "Read-only view. Files are decrypted in your browser when you download them." — files page
   dropLabel: "添加文件",   // "Add files" — files page markup: <div #drop>
